@@ -37,9 +37,9 @@
 - [x] Webhook stub at POST /api/webhooks/store
 
 ## Phase 6 — Calendar
-- [ ] Install react-big-calendar with Hebrew locale + RTL
-- [ ] CRUD for events
-- [ ] Recurring events via RRULE
+- [x] Install react-big-calendar with Hebrew locale + RTL
+- [x] CRUD for events
+- [x] Recurring events via RRULE
 
 ## Phase 7 — Dashboard / Cash Flow
 - [ ] Monthly cash flow calculation

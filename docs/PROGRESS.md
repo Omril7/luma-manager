@@ -1,3 +1,12 @@
+## [2026-06-07] Phase 6 — Calendar
+- react-big-calendar with dateFnsLocalizer + date-fns he locale; Hebrew messages (today, previous, next, month, week, day, showMore)
+- Month / week / day views; clicking an empty slot pre-fills the start time in the form
+- EventModal: title, description, all-day toggle (switches date inputs to date-only), start/end datetime pickers, recurrence select (none/daily/weekly/monthly/custom RRULE input)
+- EventPopup: read-only summary with formatted dates, edit + delete buttons; confirm before delete
+- Server actions: createEvent, updateEvent, deleteEvent with Zod validation + RLS via user_id
+- @types/react-big-calendar installed; dir="ltr" wrapper needed since rbc is not RTL-aware internally
+- Recurring events: RRULE stored in recurrence_rule column; expansion for display is left to future phase (calendar shows base event only)
+
 ## [2026-06-07] Phase 5 — Income
 - Product management modal: CRUD (create, delete), used in income modal combobox
 - Add/edit income form: product name (free text or select from products), order ID, original price, optional discount, read-only final price, payment on delivery flag, date, notes
