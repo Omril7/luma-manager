@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from 'react'
 import { createProduct, deleteProduct } from '@/app/(dashboard)/income/actions'
+import { toast } from 'sonner'
 
 type Product = {
   id: string
@@ -31,11 +32,13 @@ export default function ProductsModal({ products: initial, onClose }: Props) {
       const result = await createProduct(null, formData)
       if (result.error) {
         setError(result.error)
+        toast.error(result.error)
       } else {
         setProducts(prev => [...prev, { id: crypto.randomUUID(), name: name.trim(), description: description.trim() || null }])
         setName('')
         setDescription('')
         setError('')
+        toast.success('מוצר נוסף')
       }
     })
   }
@@ -43,8 +46,8 @@ export default function ProductsModal({ products: initial, onClose }: Props) {
   function handleDelete(id: string) {
     startTransition(async () => {
       const result = await deleteProduct(id)
-      if (result.error) setError(result.error)
-      else setProducts(prev => prev.filter(p => p.id !== id))
+      if (result.error) { setError(result.error); toast.error(result.error) }
+      else { setProducts(prev => prev.filter(p => p.id !== id)); toast.success('מוצר נמחק') }
     })
   }
 

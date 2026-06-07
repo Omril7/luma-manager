@@ -2,6 +2,7 @@
 
 import { useTransition } from 'react'
 import { deleteEvent } from '@/app/(dashboard)/calendar/actions'
+import { toast } from 'sonner'
 
 type CalendarEvent = {
   id: string
@@ -37,7 +38,9 @@ export default function EventPopup({ event, onEdit, onClose }: Props) {
   function handleDelete() {
     if (!confirm('למחוק אירוע זה?')) return
     startTransition(async () => {
-      await deleteEvent(event.id)
+      const res = await deleteEvent(event.id)
+      if (res && 'error' in res && res.error) toast.error(res.error)
+      else toast.success('אירוע נמחק')
       onClose()
     })
   }

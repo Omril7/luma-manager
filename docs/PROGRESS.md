@@ -1,3 +1,10 @@
+## [2026-06-07] Phase 9 — Polish
+- Skeleton loaders: Skeleton/CardSkeleton/TableSkeleton/PageSkeleton components; loading.tsx for all 6 dashboard routes
+- Error boundaries: error.tsx for all 6 dashboard routes with Hebrew "אירעה שגיאה" message + retry button
+- Toast notifications: `toast.success`/`toast.error` added to all action-calling client components (CategoryModal, ExpenseModal, ExpensesTable, IncomeModal, IncomeTable, ProductsModal, EventModal, EventPopup, DashboardClient, PricingClient)
+- Mobile responsiveness: Sidebar replaced with hidden-on-mobile desktop sidebar + fixed topbar + slide-in drawer on mobile; layout adds top padding on mobile to clear the topbar
+- Build passes cleanly
+
 ## [2026-06-07] Phase 8 — Product Pricing
 - 4-step wizard: חומרי גלם (dynamic parts list), עבודה (hours × rate), הוצאות נלוות (overhead/hr), רווח (% or fixed)
 - Live price breakdown card in step 4 with suggested price calculation

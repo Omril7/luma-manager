@@ -2,6 +2,7 @@
 
 import { useTransition } from 'react'
 import { deleteExpense } from '@/app/(dashboard)/expenses/actions'
+import { toast } from 'sonner'
 import DataTable, { type ColumnDef } from '@/components/ui/DataTable'
 
 type Receipt = {
@@ -55,7 +56,11 @@ export default function ExpensesTable({ expenses, filterMonth, onEdit }: Props) 
 
   function handleDelete(id: string) {
     if (!confirm('למחוק הוצאה זו?')) return
-    startTransition(async () => { await deleteExpense(id) })
+    startTransition(async () => {
+      const res = await deleteExpense(id)
+      if (res && 'error' in res && res.error) toast.error(res.error)
+      else toast.success('הוצאה נמחקה')
+    })
   }
 
   const rows: Row[] = expenses

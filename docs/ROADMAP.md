@@ -52,7 +52,7 @@
 - [x] Save pricing + view pricing history
 
 ## Phase 9 — Polish
-- [ ] Loading states + skeleton loaders
-- [ ] Error boundaries
-- [ ] Toast notifications (Hebrew messages)
-- [ ] Mobile responsiveness
+- [x] Loading states + skeleton loaders
+- [x] Error boundaries
+- [x] Toast notifications (Hebrew messages)
+- [x] Mobile responsiveness

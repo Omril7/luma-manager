@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useRef } from 'react'
 import { createAuthorityPayment, deleteAuthorityPayment, approveMonthClose, updatePaycheckPercent } from '@/app/(dashboard)/dashboard/actions'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -98,7 +99,9 @@ export default function DashboardClient({
 
   function handleDeletePayment(id: string) {
     startTransition(async () => {
-      await deleteAuthorityPayment(id)
+      const res = await deleteAuthorityPayment(id)
+      if (res && 'error' in res && res.error) toast.error(res.error)
+      else toast.success('תשלום נמחק')
     })
   }
 
@@ -110,7 +113,9 @@ export default function DashboardClient({
       const res = await createAuthorityPayment(null, fd)
       if (res && 'error' in res && res.error) {
         setAddError(res.error)
+        toast.error(res.error)
       } else {
+        toast.success('תשלום נוסף')
         setShowAddPayment(false)
         formRef.current?.reset()
       }
@@ -126,7 +131,9 @@ export default function DashboardClient({
   function handleApprove() {
     if (!confirmClose) return
     startTransition(async () => {
-      await approveMonthClose(confirmClose.month, confirmClose.opening, confirmClose.closing)
+      const res = await approveMonthClose(confirmClose.month, confirmClose.opening, confirmClose.closing)
+      if (res && 'error' in res && res.error) toast.error(res.error)
+      else toast.success('החודש נסגר בהצלחה')
       setConfirmClose(null)
     })
   }

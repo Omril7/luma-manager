@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from 'react'
 import { createIncome, updateIncome } from '@/app/(dashboard)/income/actions'
+import { toast } from 'sonner'
 
 type Product = {
   id: string
@@ -49,7 +50,9 @@ export default function IncomeModal({ products, income, onClose }: Props) {
       const result = await action(null, formData)
       if (result.error) {
         setError(result.error)
+        toast.error(result.error)
       } else {
+        toast.success(income ? 'הכנסה עודכנה' : 'הכנסה נוספה')
         onClose()
       }
     })

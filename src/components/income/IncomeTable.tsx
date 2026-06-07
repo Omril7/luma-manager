@@ -2,6 +2,7 @@
 
 import { useTransition } from 'react'
 import { deleteIncome } from '@/app/(dashboard)/income/actions'
+import { toast } from 'sonner'
 import DataTable, { type ColumnDef } from '@/components/ui/DataTable'
 
 type IncomeRow = {
@@ -33,7 +34,11 @@ export default function IncomeTable({ rows, filterMonth, onEdit }: Props) {
 
   function handleDelete(id: string) {
     if (!confirm('למחוק הכנסה זו?')) return
-    startTransition(async () => { await deleteIncome(id) })
+    startTransition(async () => {
+      const res = await deleteIncome(id)
+      if (res && 'error' in res && res.error) toast.error(res.error)
+      else toast.success('הכנסה נמחקה')
+    })
   }
 
   const filtered = rows.filter(r => r.income_date.slice(0, 7) === filterMonth)

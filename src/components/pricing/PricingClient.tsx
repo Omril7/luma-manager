@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { savePricing, deletePricing, SavePricingInput } from '@/app/(dashboard)/pricing/actions'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -102,7 +103,9 @@ export default function PricingClient({ pricings, defaultHourlyRate }: Props) {
       const res = await savePricing(input)
       if (res && 'error' in res && res.error) {
         setError(res.error)
+        toast.error(res.error)
       } else {
+        toast.success('תמחור נשמר')
         setShowWizard(false)
       }
     })
@@ -111,7 +114,9 @@ export default function PricingClient({ pricings, defaultHourlyRate }: Props) {
   function handleDelete(id: string) {
     if (!confirm('למחוק תמחור זה?')) return
     startTransition(async () => {
-      await deletePricing(id)
+      const res = await deletePricing(id)
+      if (res && 'error' in res && res.error) toast.error(res.error)
+      else toast.success('תמחור נמחק')
     })
   }
 

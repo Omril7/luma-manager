@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from 'react'
 import { createEvent, updateEvent } from '@/app/(dashboard)/calendar/actions'
+import { toast } from 'sonner'
 
 type CalendarEvent = {
   id: string
@@ -76,8 +77,8 @@ export default function EventModal({ event, defaultStart, onClose }: Props) {
     startTransition(async () => {
       const action = event ? updateEvent : createEvent
       const result = await action(null, formData)
-      if (result.error) setError(result.error)
-      else onClose()
+      if (result.error) { setError(result.error); toast.error(result.error) }
+      else { toast.success(event ? 'אירוע עודכן' : 'אירוע נוסף'); onClose() }
     })
   }
 

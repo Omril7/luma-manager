@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from 'react'
 import { createCategory, updateCategoryVat, deleteCategory } from '@/app/(dashboard)/expenses/actions'
+import { toast } from 'sonner'
 
 type Category = {
   id: string
@@ -30,10 +31,12 @@ export default function CategoryModal({ categories, onClose }: Props) {
       const result = await createCategory(null, formData)
       if (result.error) {
         setError(result.error)
+        toast.error(result.error)
       } else {
         setCats(prev => [...prev, { id: crypto.randomUUID(), name: newName.trim(), is_vat_recognized: false }])
         setNewName('')
         setError('')
+        toast.success('קטגוריה נוספה')
       }
     })
   }
@@ -50,8 +53,10 @@ export default function CategoryModal({ categories, onClose }: Props) {
       const result = await deleteCategory(catId)
       if (result.error) {
         setError(result.error)
+        toast.error(result.error)
       } else {
         setCats(prev => prev.filter(c => c.id !== catId))
+        toast.success('קטגוריה נמחקה')
       }
     })
   }

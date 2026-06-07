@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from 'react'
 import { createExpense, updateExpense } from '@/app/(dashboard)/expenses/actions'
+import { toast } from 'sonner'
 
 type Category = {
   id: string
@@ -54,7 +55,9 @@ export default function ExpenseModal({ categories, expense, onClose, onCategoryM
       const result = await action(null, formData)
       if (result.error) {
         setError(result.error)
+        toast.error(result.error)
       } else {
+        toast.success(expense ? 'הוצאה עודכנה' : 'הוצאה נוספה')
         onClose()
       }
     })
