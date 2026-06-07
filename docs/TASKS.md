@@ -6,7 +6,7 @@ Manual tasks that require dashboard access, credentials, or external services.
 
 ## Supabase
 
-### Connect the project
+### Connect the project - Eden's organization
 - [ ] Create a project at https://supabase.com
 - [ ] Copy the project URL and keys into `.env.local`:
   ```
@@ -24,12 +24,12 @@ Manual tasks that require dashboard access, credentials, or external services.
 
 ---
 
-## Cloudinary
+## Cloudinary - Omri's account
 - [x] Keys added to `.env.local` ✓
 
 ---
 
-## Gmail (for summary email)
+## Gmail (for summary email) - Omri's account
 - [x] `GMAIL_USER` added to `.env.local` ✓
 - [x] `GMAIL_APP_PASSWORD` added to `.env.local` ✓
 
