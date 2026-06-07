@@ -11,8 +11,8 @@
 - [x] Login and Register pages (Hebrew UI)
 
 ## Phase 2 — Settings & User
-- [ ] Settings page: VAT rate, paycheck %, opening balance, Gmail config
-- [ ] Save and read from settings table
+- [x] Settings page: VAT rate, paycheck %, opening balance, Gmail config
+- [x] Save and read from settings table
 
 ## Phase 3 — Expenses
 - [ ] Category management (CRUD + VAT recognized toggle)

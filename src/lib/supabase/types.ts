@@ -9,7 +9,7 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export interface Database {
+export type Database = {
   public: {
     Tables: {
       settings: {
@@ -24,8 +24,29 @@ export interface Database {
           gmail_app_password: string | null
           created_at: string
         }
-        Insert: Omit<Database['public']['Tables']['settings']['Row'], 'id' | 'created_at'>
-        Update: Partial<Database['public']['Tables']['settings']['Insert']>
+        Insert: {
+          id?: string
+          user_id: string
+          vat_rate?: number
+          paycheck_percent?: number
+          opening_balance?: number
+          business_name?: string | null
+          gmail_user?: string | null
+          gmail_app_password?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          vat_rate?: number
+          paycheck_percent?: number
+          opening_balance?: number
+          business_name?: string | null
+          gmail_user?: string | null
+          gmail_app_password?: string | null
+          created_at?: string
+        }
+        Relationships: []
       }
       expense_categories: {
         Row: {
@@ -35,8 +56,21 @@ export interface Database {
           is_vat_recognized: boolean
           created_at: string
         }
-        Insert: Omit<Database['public']['Tables']['expense_categories']['Row'], 'id' | 'created_at'>
-        Update: Partial<Database['public']['Tables']['expense_categories']['Insert']>
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          is_vat_recognized?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          is_vat_recognized?: boolean
+          created_at?: string
+        }
+        Relationships: []
       }
       expenses: {
         Row: {
@@ -52,8 +86,33 @@ export interface Database {
           notes: string | null
           created_at: string
         }
-        Insert: Omit<Database['public']['Tables']['expenses']['Row'], 'id' | 'created_at'>
-        Update: Partial<Database['public']['Tables']['expenses']['Insert']>
+        Insert: {
+          id?: string
+          user_id: string
+          category_id?: string | null
+          description: string
+          total_amount: number
+          transaction_date: string
+          is_recurring?: boolean
+          installments_total?: number
+          is_personal?: boolean
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          category_id?: string | null
+          description?: string
+          total_amount?: number
+          transaction_date?: string
+          is_recurring?: boolean
+          installments_total?: number
+          is_personal?: boolean
+          notes?: string | null
+          created_at?: string
+        }
+        Relationships: []
       }
       expense_installments: {
         Row: {
@@ -65,8 +124,25 @@ export interface Database {
           amount: number
           vat_amount: number
         }
-        Insert: Omit<Database['public']['Tables']['expense_installments']['Row'], 'id'>
-        Update: Partial<Database['public']['Tables']['expense_installments']['Insert']>
+        Insert: {
+          id?: string
+          expense_id: string
+          user_id: string
+          installment_number: number
+          due_month: string
+          amount: number
+          vat_amount?: number
+        }
+        Update: {
+          id?: string
+          expense_id?: string
+          user_id?: string
+          installment_number?: number
+          due_month?: string
+          amount?: number
+          vat_amount?: number
+        }
+        Relationships: []
       }
       receipts: {
         Row: {
@@ -78,8 +154,25 @@ export interface Database {
           file_type: string | null
           created_at: string
         }
-        Insert: Omit<Database['public']['Tables']['receipts']['Row'], 'id' | 'created_at'>
-        Update: Partial<Database['public']['Tables']['receipts']['Insert']>
+        Insert: {
+          id?: string
+          expense_id: string
+          user_id: string
+          cloudinary_public_id: string
+          cloudinary_url: string
+          file_type?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          expense_id?: string
+          user_id?: string
+          cloudinary_public_id?: string
+          cloudinary_url?: string
+          file_type?: string | null
+          created_at?: string
+        }
+        Relationships: []
       }
       income: {
         Row: {
@@ -97,8 +190,37 @@ export interface Database {
           notes: string | null
           created_at: string
         }
-        Insert: Omit<Database['public']['Tables']['income']['Row'], 'id' | 'created_at'>
-        Update: Partial<Database['public']['Tables']['income']['Insert']>
+        Insert: {
+          id?: string
+          user_id: string
+          source?: string
+          order_id?: string | null
+          product_id?: string | null
+          product_name: string
+          original_price: number
+          discount_amount?: number
+          final_price: number
+          payment_on_delivery?: boolean
+          income_date: string
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          source?: string
+          order_id?: string | null
+          product_id?: string | null
+          product_name?: string
+          original_price?: number
+          discount_amount?: number
+          final_price?: number
+          payment_on_delivery?: boolean
+          income_date?: string
+          notes?: string | null
+          created_at?: string
+        }
+        Relationships: []
       }
       products: {
         Row: {
@@ -109,8 +231,23 @@ export interface Database {
           description: string | null
           created_at: string
         }
-        Insert: Omit<Database['public']['Tables']['products']['Row'], 'id' | 'created_at'>
-        Update: Partial<Database['public']['Tables']['products']['Insert']>
+        Insert: {
+          id?: string
+          user_id: string
+          external_id?: string | null
+          name: string
+          description?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          external_id?: string | null
+          name?: string
+          description?: string | null
+          created_at?: string
+        }
+        Relationships: []
       }
       calendar_events: {
         Row: {
@@ -124,8 +261,29 @@ export interface Database {
           recurrence_rule: string | null
           created_at: string
         }
-        Insert: Omit<Database['public']['Tables']['calendar_events']['Row'], 'id' | 'created_at'>
-        Update: Partial<Database['public']['Tables']['calendar_events']['Insert']>
+        Insert: {
+          id?: string
+          user_id: string
+          title: string
+          description?: string | null
+          start_time: string
+          end_time?: string | null
+          is_all_day?: boolean
+          recurrence_rule?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string
+          description?: string | null
+          start_time?: string
+          end_time?: string | null
+          is_all_day?: boolean
+          recurrence_rule?: string | null
+          created_at?: string
+        }
+        Relationships: []
       }
       product_pricings: {
         Row: {
@@ -140,8 +298,31 @@ export interface Database {
           suggested_price: number | null
           created_at: string
         }
-        Insert: Omit<Database['public']['Tables']['product_pricings']['Row'], 'id' | 'created_at'>
-        Update: Partial<Database['public']['Tables']['product_pricings']['Insert']>
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          hourly_rate?: number
+          time_hours?: number
+          overhead_per_hour?: number
+          profit_type?: string
+          profit_value?: number
+          suggested_price?: number | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          hourly_rate?: number
+          time_hours?: number
+          overhead_per_hour?: number
+          profit_type?: string
+          profit_value?: number
+          suggested_price?: number | null
+          created_at?: string
+        }
+        Relationships: []
       }
       pricing_parts: {
         Row: {
@@ -151,8 +332,21 @@ export interface Database {
           name: string
           price: number
         }
-        Insert: Omit<Database['public']['Tables']['pricing_parts']['Row'], 'id'>
-        Update: Partial<Database['public']['Tables']['pricing_parts']['Insert']>
+        Insert: {
+          id?: string
+          pricing_id: string
+          user_id: string
+          name: string
+          price: number
+        }
+        Update: {
+          id?: string
+          pricing_id?: string
+          user_id?: string
+          name?: string
+          price?: number
+        }
+        Relationships: []
       }
       authority_payments: {
         Row: {
@@ -164,8 +358,25 @@ export interface Database {
           notes: string | null
           created_at: string
         }
-        Insert: Omit<Database['public']['Tables']['authority_payments']['Row'], 'id' | 'created_at'>
-        Update: Partial<Database['public']['Tables']['authority_payments']['Insert']>
+        Insert: {
+          id?: string
+          user_id: string
+          type: string
+          amount: number
+          payment_month: string
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          type?: string
+          amount?: number
+          payment_month?: string
+          notes?: string | null
+          created_at?: string
+        }
+        Relationships: []
       }
       balance_snapshots: {
         Row: {
@@ -177,12 +388,30 @@ export interface Database {
           approved_at: string | null
           created_at: string
         }
-        Insert: Omit<Database['public']['Tables']['balance_snapshots']['Row'], 'id' | 'created_at'>
-        Update: Partial<Database['public']['Tables']['balance_snapshots']['Insert']>
+        Insert: {
+          id?: string
+          user_id: string
+          snapshot_month: string
+          opening_balance: number
+          closing_balance: number
+          approved_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          snapshot_month?: string
+          opening_balance?: number
+          closing_balance?: number
+          approved_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
       }
     }
-    Views: Record<string, never>
-    Functions: Record<string, never>
-    Enums: Record<string, never>
+    Views: { [_ in never]: never }
+    Functions: { [_ in never]: never }
+    Enums: { [_ in never]: never }
+    CompositeTypes: { [_ in never]: never }
   }
 }

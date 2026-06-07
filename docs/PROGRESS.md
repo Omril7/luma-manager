@@ -1,3 +1,10 @@
+## [2026-06-07] Phase 2 — Settings & User
+- Settings page with 4 sections: כללי, עובר ושב, מייל, חשבון
+- Server Actions for each section with Zod validation
+- Zustand settingsStore + useSettings hook
+- Fixed Database types to match @supabase/supabase-js v2 format (added Relationships, CompositeTypes, correct empty View/Function/Enum types)
+- Deviations: used useFormState (react-dom) instead of useActionState (React 19 only)
+
 ## [2026-06-07] Phase 1 — Infrastructure
 - Scaffolded Next.js 14 (App Router, TypeScript strict, Tailwind CSS)
 - Rewrote all shadcn/ui components from v4 format to Tailwind v3 / Radix UI compatible (shadcn@latest generates v4-style components incompatible with Next.js 14's Tailwind v3)
