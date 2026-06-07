@@ -48,8 +48,8 @@
 - [x] Running balance tracker + month-close confirmation flow
 
 ## Phase 8 — Product Pricing
-- [ ] 4-step pricing wizard (materials, labor, overhead, profit)
-- [ ] Save pricing + view pricing history
+- [x] 4-step pricing wizard (materials, labor, overhead, profit)
+- [x] Save pricing + view pricing history
 
 ## Phase 9 — Polish
 - [ ] Loading states + skeleton loaders

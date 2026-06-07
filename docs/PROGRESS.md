@@ -1,3 +1,11 @@
+## [2026-06-07] Phase 8 — Product Pricing
+- 4-step wizard: חומרי גלם (dynamic parts list), עבודה (hours × rate), הוצאות נלוות (overhead/hr), רווח (% or fixed)
+- Live price breakdown card in step 4 with suggested price calculation
+- Save to product_pricings + pricing_parts tables via server action (Zod-validated)
+- Pricing history list: name, date, suggested price; click row for detail modal; delete with confirm
+- Supabase join type required `as unknown as` cast (same pattern as previous phases)
+- Build passes cleanly
+
 ## [2026-06-07] Phase 7 — Dashboard / Cash Flow
 - 5 summary cards: הכנסות, הוצאות, רווח גולמי, משכורת, יתרה לעסק — all live-calculated
 - Salary control: number input for paycheck % saved to settings on blur via server action
