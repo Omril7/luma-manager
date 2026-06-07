@@ -1,3 +1,11 @@
+## [2026-06-07] Phase 7 — Dashboard / Cash Flow
+- 5 summary cards: הכנסות, הוצאות, רווח גולמי, משכורת, יתרה לעסק — all live-calculated
+- Salary control: number input for paycheck % saved to settings on blur via server action
+- Authority payments panel: add/delete payments for current month (income_tax, social_security, vat); persisted in authority_payments table; excluded from expense summaries
+- Running balance table (עובר ושב): all months with data shown; opening balance chains from settings.opening_balance or last approved snapshot; closing = opening + gross_profit - salary - authority
+- Month-close confirmation: "סגור חודש" button on current live row → confirm dialog → upsert to balance_snapshots with approved_at; approved rows use snapshot values thereafter
+- Build passes cleanly
+
 ## [2026-06-07] Phase 6 — Calendar
 - react-big-calendar with dateFnsLocalizer + date-fns he locale; Hebrew messages (today, previous, next, month, week, day, showMore)
 - Month / week / day views; clicking an empty slot pre-fills the start time in the form

@@ -42,10 +42,10 @@
 - [x] Recurring events via RRULE
 
 ## Phase 7 — Dashboard / Cash Flow
-- [ ] Monthly cash flow calculation
-- [ ] Authority payments panel (income tax, social security, VAT)
-- [ ] Salary percentage control
-- [ ] Running balance tracker + month-close confirmation flow
+- [x] Monthly cash flow calculation
+- [x] Authority payments panel (income tax, social security, VAT)
+- [x] Salary percentage control
+- [x] Running balance tracker + month-close confirmation flow
 
 ## Phase 8 — Product Pricing
 - [ ] 4-step pricing wizard (materials, labor, overhead, profit)

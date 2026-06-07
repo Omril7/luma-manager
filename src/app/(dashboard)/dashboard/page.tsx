@@ -1,8 +1,186 @@
-export default function DashboardPage() {
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import DashboardClient from '@/components/dashboard/DashboardClient'
+
+function toYM(dateStr: string) {
+  return dateStr.slice(0, 7) // YYYY-MM
+}
+
+function firstOfMonth(ym: string) {
+  return ym + '-01'
+}
+
+export default async function DashboardPage() {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const now = new Date()
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const monthStart = firstOfMonth(currentMonth)
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
+
+  const [
+    { data: settings },
+    { data: installments },
+    { data: incomeRows },
+    { data: authorityPayments },
+    { data: snapshots },
+    { data: allInstallments },
+    { data: allIncome },
+    { data: allAuthority },
+  ] = await Promise.all([
+    supabase.from('settings').select('paycheck_percent, opening_balance').eq('user_id', user.id).single(),
+    // current month business expenses
+    supabase
+      .from('expense_installments')
+      .select('amount, expenses!inner(is_personal, user_id)')
+      .eq('expenses.user_id', user.id)
+      .eq('expenses.is_personal', false)
+      .gte('due_month', monthStart)
+      .lte('due_month', monthEnd),
+    // current month income
+    supabase
+      .from('income')
+      .select('final_price')
+      .eq('user_id', user.id)
+      .gte('income_date', monthStart)
+      .lte('income_date', monthEnd),
+    // authority payments this month
+    supabase
+      .from('authority_payments')
+      .select('id, type, amount, payment_month, notes')
+      .eq('user_id', user.id)
+      .gte('payment_month', monthStart)
+      .lte('payment_month', monthEnd)
+      .order('created_at'),
+    // all balance snapshots
+    supabase
+      .from('balance_snapshots')
+      .select('snapshot_month, opening_balance, closing_balance, approved_at')
+      .eq('user_id', user.id)
+      .order('snapshot_month', { ascending: true }),
+    // all installments for running balance (past 12 months)
+    supabase
+      .from('expense_installments')
+      .select('amount, due_month, expenses!inner(is_personal, user_id)')
+      .eq('expenses.user_id', user.id)
+      .eq('expenses.is_personal', false),
+    // all income for running balance
+    supabase
+      .from('income')
+      .select('final_price, income_date')
+      .eq('user_id', user.id),
+    // all authority payments for running balance
+    supabase
+      .from('authority_payments')
+      .select('amount, payment_month')
+      .eq('user_id', user.id),
+  ])
+
+  const paycheckPercent = settings?.paycheck_percent ?? 30
+  const openingBalance = settings?.opening_balance ?? 0
+
+  const monthIncome = (incomeRows ?? []).reduce((s, r) => s + r.final_price, 0)
+  const monthExpenses = (installments ?? []).reduce((s, r) => s + r.amount, 0)
+
+  // Build running balance rows for the last 12 months + current
+  const snapshotMap = new Map<string, typeof snapshots extends (infer T)[] | null ? T : never>()
+  for (const snap of snapshots ?? []) {
+    snapshotMap.set(toYM(snap.snapshot_month), snap)
+  }
+
+  // Group income/expenses/authority by month
+  const incomeByMonth = new Map<string, number>()
+  for (const r of allIncome ?? []) {
+    const ym = toYM(r.income_date)
+    incomeByMonth.set(ym, (incomeByMonth.get(ym) ?? 0) + r.final_price)
+  }
+
+  const expensesByMonth = new Map<string, number>()
+  for (const r of allInstallments ?? []) {
+    const ym = toYM((r as { due_month: string }).due_month)
+    expensesByMonth.set(ym, (expensesByMonth.get(ym) ?? 0) + (r as { amount: number }).amount)
+  }
+
+  const authorityByMonth = new Map<string, number>()
+  for (const r of allAuthority ?? []) {
+    const ym = toYM(r.payment_month)
+    authorityByMonth.set(ym, (authorityByMonth.get(ym) ?? 0) + r.amount)
+  }
+
+  // Collect all months that have data, plus current
+  const allMonths = new Set<string>([
+    ...Array.from(incomeByMonth.keys()),
+    ...Array.from(expensesByMonth.keys()),
+    ...Array.from(authorityByMonth.keys()),
+    ...Array.from(snapshotMap.keys()),
+    currentMonth,
+  ])
+
+  const sortedMonths = Array.from(allMonths).sort()
+
+  // Build rows with running balance
+  let runningBalance = openingBalance
+  // Find first approved snapshot before our range to set opening
+  const firstMonth = sortedMonths[0] ?? currentMonth
+  // If there's a snapshot just before firstMonth, use its closing balance
+  const preSnapshots = (snapshots ?? []).filter(s => toYM(s.snapshot_month) < firstMonth)
+  if (preSnapshots.length > 0) {
+    runningBalance = preSnapshots[preSnapshots.length - 1].closing_balance
+  }
+
+  const balanceRows = sortedMonths.map(month => {
+    const snap = snapshotMap.get(month)
+    const income = incomeByMonth.get(month) ?? 0
+    const expenses = expensesByMonth.get(month) ?? 0
+    const authority = authorityByMonth.get(month) ?? 0
+    const grossP = income - expenses
+    const sal = grossP * (paycheckPercent / 100)
+    const isLive = month === currentMonth && !snap?.approved_at
+
+    if (snap?.approved_at) {
+      const row = {
+        month,
+        label: month,
+        opening: snap.opening_balance,
+        income,
+        expenses,
+        authority,
+        salary: sal,
+        closing: snap.closing_balance,
+        isLive: false,
+      }
+      runningBalance = snap.closing_balance
+      return row
+    }
+
+    const opening = runningBalance
+    const closing = opening + grossP - sal - authority
+    runningBalance = closing
+
+    return {
+      month,
+      label: month,
+      opening,
+      income,
+      expenses,
+      authority,
+      salary: sal,
+      closing,
+      isLive,
+    }
+  })
+
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">תזרים מזומנים</h1>
-      <p className="text-gray-500">בקרוב — Phase 7</p>
-    </div>
+    <DashboardClient
+      currentMonth={currentMonth}
+      monthIncome={monthIncome}
+      monthExpenses={monthExpenses}
+      authorityPayments={(authorityPayments ?? []) as { id: string; type: string; amount: number; payment_month: string; notes: string | null }[]}
+      paycheckPercent={paycheckPercent}
+      snapshots={(snapshots ?? []) as { snapshot_month: string; opening_balance: number; closing_balance: number; approved_at: string | null }[]}
+      balanceRows={balanceRows}
+    />
   )
 }
