@@ -37,3 +37,8 @@ Manual tasks that require dashboard access, credentials, or external services.
 
 ## Webhook
 - [ ] Set `WEBHOOK_SECRET` in `.env.local` to a random secure string (used to verify incoming store webhooks)
+
+---
+
+## Deployment
+- [ ] Deploy to Vercel under Omri's account at https://luma-manager.vercel.app
