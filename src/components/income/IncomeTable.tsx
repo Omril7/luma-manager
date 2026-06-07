@@ -4,6 +4,7 @@ import { useTransition } from 'react'
 import { deleteIncome } from '@/app/(dashboard)/income/actions'
 import { toast } from 'sonner'
 import DataTable, { type ColumnDef } from '@/components/ui/DataTable'
+import { Button } from '@/components/ui/button'
 
 type IncomeRow = {
   id: string
@@ -48,7 +49,7 @@ export default function IncomeTable({ rows, filterMonth, onEdit }: Props) {
       key: 'income_date',
       header: 'תאריך',
       sortValue: r => r.income_date,
-      render: r => <span className="text-gray-600">{new Date(r.income_date).toLocaleDateString('he-IL')}</span>,
+      render: r => <span className="text-muted-foreground">{new Date(r.income_date).toLocaleDateString('he-IL')}</span>,
     },
     {
       key: 'product_name',
@@ -59,7 +60,7 @@ export default function IncomeTable({ rows, filterMonth, onEdit }: Props) {
     {
       key: 'order_id',
       header: 'מספר הזמנה',
-      render: r => <span className="text-gray-500 text-xs">{r.order_id ?? '—'}</span>,
+      render: r => <span className="text-muted-foreground text-xs">{r.order_id ?? '—'}</span>,
       defaultHidden: true,
     },
     {
@@ -85,15 +86,15 @@ export default function IncomeTable({ rows, filterMonth, onEdit }: Props) {
       header: 'מסירה',
       render: r =>
         r.payment_on_delivery
-          ? <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">במסירה</span>
-          : <span className="text-gray-400">—</span>,
+          ? <span className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-2 py-0.5 rounded-full">במסירה</span>
+          : <span className="text-muted-foreground/50">—</span>,
     },
     {
       key: 'source',
       header: 'מקור',
       sortValue: r => r.source,
       render: r => (
-        <span className={`text-xs px-2 py-0.5 rounded-full ${r.source === 'store' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>
+        <span className={`text-xs px-2 py-0.5 rounded-full ${r.source === 'store' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-muted text-muted-foreground'}`}>
           {r.source === 'store' ? 'חנות' : 'ידני'}
         </span>
       ),
@@ -102,15 +103,9 @@ export default function IncomeTable({ rows, filterMonth, onEdit }: Props) {
       key: 'actions',
       header: 'פעולות',
       render: r => (
-        <div className="flex gap-2">
-          <button onClick={() => onEdit(r)} className="text-gray-400 hover:text-blue-600 text-xs">ערוך</button>
-          <button
-            onClick={() => handleDelete(r.id)}
-            disabled={isPending}
-            className="text-gray-400 hover:text-red-600 text-xs disabled:opacity-50"
-          >
-            מחק
-          </button>
+        <div className="flex gap-1">
+          <Button variant="ghost" size="sm" onClick={() => onEdit(r)} className="h-7 px-2 text-xs text-muted-foreground hover:text-primary">ערוך</Button>
+          <Button variant="ghost" size="sm" onClick={() => handleDelete(r.id)} disabled={isPending} className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive">מחק</Button>
         </div>
       ),
     },

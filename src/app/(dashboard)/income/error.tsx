@@ -6,7 +6,7 @@ export default function Error({ error, reset }: { error: Error; reset: () => voi
   useEffect(() => { console.error(error) }, [error])
   return (
     <div className="flex flex-col items-center justify-center h-64 gap-4 text-center">
-      <p className="text-gray-600">אירעה שגיאה בטעינת הדף</p>
+      <p className="text-muted-foreground">אירעה שגיאה בטעינת הדף</p>
       <Button onClick={reset}>נסה שוב</Button>
     </div>
   )

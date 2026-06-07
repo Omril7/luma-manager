@@ -59,7 +59,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-background">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">כניסה למערכת</CardTitle>
@@ -86,19 +86,19 @@ export default function LoginPage() {
             <div className="space-y-1">
               <Label htmlFor="email">כתובת מייל</Label>
               <Input id="email" type="email" {...register('email')} />
-              {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
+              {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
             </div>
             <div className="space-y-1">
               <Label htmlFor="password">סיסמה</Label>
               <Input id="password" type="password" {...register('password')} />
-              {errors.password && <p className="text-sm text-red-500">{errors.password.message}</p>}
+              {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'מתחבר...' : 'כניסה עם מייל וסיסמה'}
             </Button>
           </form>
 
-          <p className="text-center text-sm text-gray-600">
+          <p className="text-center text-sm text-muted-foreground">
             אין לך חשבון?{' '}
             <Link href="/register" className="text-blue-600 hover:underline">
               הרשמה

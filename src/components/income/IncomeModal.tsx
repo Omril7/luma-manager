@@ -3,30 +3,20 @@
 import { useRef, useState, useTransition } from 'react'
 import { createIncome, updateIncome } from '@/app/(dashboard)/income/actions'
 import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Textarea } from '@/components/ui/textarea'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 
-type Product = {
-  id: string
-  name: string
-}
-
+type Product = { id: string; name: string }
 type IncomeRow = {
-  id: string
-  product_name: string
-  product_id: string | null
-  order_id: string | null
-  original_price: number
-  discount_amount: number
-  final_price: number
-  payment_on_delivery: boolean
-  income_date: string
-  notes: string | null
+  id: string; product_name: string; product_id: string | null; order_id: string | null
+  original_price: number; discount_amount: number; final_price: number
+  payment_on_delivery: boolean; income_date: string; notes: string | null
 }
-
-type Props = {
-  products: Product[]
-  income?: IncomeRow
-  onClose: () => void
-}
+type Props = { products: Product[]; income?: IncomeRow; onClose: () => void }
 
 export default function IncomeModal({ products, income, onClose }: Props) {
   const [isPending, startTransition] = useTransition()
@@ -38,53 +28,38 @@ export default function IncomeModal({ products, income, onClose }: Props) {
   const formRef = useRef<HTMLFormElement>(null)
 
   const finalPrice = originalPrice - (hasDiscount ? discountAmount : 0)
+  const today = new Date().toISOString().slice(0, 10)
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const formData = new FormData(formRef.current!)
     formData.set('has_discount', hasDiscount ? 'true' : 'false')
     if (!hasDiscount) formData.set('discount_amount', '0')
-
     startTransition(async () => {
       const action = income ? updateIncome : createIncome
       const result = await action(null, formData)
-      if (result.error) {
-        setError(result.error)
-        toast.error(result.error)
-      } else {
-        toast.success(income ? 'הכנסה עודכנה' : 'הכנסה נוספה')
-        onClose()
-      }
+      if (result.error) { setError(result.error); toast.error(result.error) }
+      else { toast.success(income ? 'הכנסה עודכנה' : 'הכנסה נוספה'); onClose() }
     })
   }
 
-  const today = new Date().toISOString().slice(0, 10)
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" dir="rtl">
-        <div className="sticky top-0 bg-white border-b border-gray-100 flex items-center justify-between px-6 py-4">
-          <h2 className="text-lg font-bold">{income ? 'עריכת הכנסה' : 'הוספת הכנסה'}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
-        </div>
+    <Dialog open onOpenChange={v => { if (!v) onClose() }}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogHeader>
+          <DialogTitle>{income ? 'עריכת הכנסה' : 'הוספת הכנסה'}</DialogTitle>
+        </DialogHeader>
 
-        <form ref={formRef} onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
           {income && <input type="hidden" name="income_id" value={income.id} />}
+          {error && <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2">{error}</p>}
 
-          {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
-
-          {/* Product selection or free text */}
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <label className="text-sm font-medium text-gray-700">שם מוצר *</label>
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-3">
+              <Label>שם מוצר *</Label>
               {products.length > 0 && (
-                <label className="flex items-center gap-1 text-xs text-gray-500 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={useProduct}
-                    onChange={e => setUseProduct(e.target.checked)}
-                    className="accent-blue-600"
-                  />
+                <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+                  <Checkbox checked={useProduct} onCheckedChange={v => setUseProduct(!!v)} />
                   בחר ממוצרים קיימים
                 </label>
               )}
@@ -98,138 +73,72 @@ export default function IncomeModal({ products, income, onClose }: Props) {
                   const nameInput = formRef.current?.querySelector<HTMLInputElement>('[name="product_name"]')
                   if (nameInput && product) nameInput.value = product.name
                 }}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
               >
                 <option value="">בחר מוצר...</option>
-                {products.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
+                {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             ) : (
               <input type="hidden" name="product_id" value="" />
             )}
-            <input
-              name="product_name"
-              defaultValue={income?.product_name}
-              required
-              placeholder="שם מוצר"
-              className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${useProduct ? 'mt-2' : ''}`}
-            />
+            <Input name="product_name" defaultValue={income?.product_name} required placeholder="שם מוצר" className={useProduct ? 'mt-2' : ''} />
           </div>
 
-          {/* Order ID */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">מספר הזמנה</label>
-            <input
-              name="order_id"
-              defaultValue={income?.order_id ?? ''}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          <div className="space-y-1.5">
+            <Label>מספר הזמנה</Label>
+            <Input name="order_id" defaultValue={income?.order_id ?? ''} />
           </div>
 
-          {/* Original price */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">מחיר מקורי (₪) *</label>
-            <input
-              name="original_price"
-              type="number"
-              step="0.01"
-              min="0"
-              value={originalPrice}
-              onChange={e => setOriginalPrice(Number(e.target.value))}
-              required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          <div className="space-y-1.5">
+            <Label>מחיר מקורי (₪) *</Label>
+            <Input name="original_price" type="number" step="0.01" min="0" value={originalPrice}
+              onChange={e => setOriginalPrice(Number(e.target.value))} required />
           </div>
 
-          {/* Discount */}
           <div className="space-y-2">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={hasDiscount}
-                onChange={e => setHasDiscount(e.target.checked)}
-                className="accent-blue-600"
-              />
-              <span className="text-sm">יש הנחה</span>
-            </label>
+            <div className="flex items-center gap-2">
+              <Checkbox id="has_discount" checked={hasDiscount} onCheckedChange={v => setHasDiscount(!!v)} />
+              <Label htmlFor="has_discount" className="font-normal cursor-pointer">יש הנחה</Label>
+            </div>
             {hasDiscount && (
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">סכום הנחה (₪)</label>
-                <input
-                  name="discount_amount"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={discountAmount}
-                  onChange={e => setDiscountAmount(Number(e.target.value))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">סכום הנחה (₪)</Label>
+                <Input name="discount_amount" type="number" step="0.01" min="0"
+                  value={discountAmount} onChange={e => setDiscountAmount(Number(e.target.value))} />
               </div>
             )}
           </div>
 
-          {/* Final price (read-only) */}
-          <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3">
-            <p className="text-xs text-green-700 mb-0.5">מחיר סופי</p>
-            <p className="text-xl font-bold text-green-800">
+          <div className="bg-green-500/10 border border-green-500/30 rounded-lg px-4 py-3">
+            <p className="text-xs text-green-700 dark:text-green-400 mb-0.5">מחיר סופי</p>
+            <p className="text-xl font-bold text-green-800 dark:text-green-300">
               {finalPrice.toLocaleString('he-IL', { style: 'currency', currency: 'ILS', maximumFractionDigits: 2 })}
             </p>
           </div>
 
-          {/* Checkboxes */}
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              name="payment_on_delivery"
-              value="true"
-              defaultChecked={income?.payment_on_delivery}
-              className="accent-blue-600"
-            />
-            <span className="text-sm">תשלום במסירה</span>
-          </label>
-
-          {/* Date */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">תאריך *</label>
-            <input
-              name="income_date"
-              type="date"
-              defaultValue={income?.income_date ?? today}
-              required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          <div className="flex items-center gap-2">
+            <Checkbox name="payment_on_delivery" value="true" defaultChecked={income?.payment_on_delivery} id="payment_on_delivery" />
+            <Label htmlFor="payment_on_delivery" className="font-normal cursor-pointer">תשלום במסירה</Label>
           </div>
 
-          {/* Notes */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">הערות</label>
-            <textarea
-              name="notes"
-              defaultValue={income?.notes ?? ''}
-              rows={2}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-            />
+          <div className="space-y-1.5">
+            <Label>תאריך *</Label>
+            <Input name="income_date" type="date" defaultValue={income?.income_date ?? today} required />
           </div>
 
-          <div className="flex gap-3 pt-2">
-            <button
-              type="submit"
-              disabled={isPending}
-              className="flex-1 bg-blue-600 text-white py-2.5 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 text-sm"
-            >
+          <div className="space-y-1.5">
+            <Label>הערות</Label>
+            <Textarea name="notes" defaultValue={income?.notes ?? ''} rows={2} />
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>ביטול</Button>
+            <Button type="submit" disabled={isPending}>
               {isPending ? 'שומר...' : income ? 'שמור שינויים' : 'הוסף הכנסה'}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50"
-            >
-              ביטול
-            </button>
-          </div>
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

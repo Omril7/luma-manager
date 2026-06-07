@@ -94,10 +94,10 @@ export default function CalendarClient({ events }: Props) {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h1 className="text-2xl font-bold text-gray-900">יומן</h1>
+        <h1 className="text-2xl font-bold text-foreground">יומן</h1>
         <button
           onClick={openAdd}
-          className="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700"
+          className="bg-primary text-primary-foreground text-sm px-4 py-2 rounded-lg hover:opacity-90"
         >
           + אירוע חדש
         </button>
@@ -105,7 +105,7 @@ export default function CalendarClient({ events }: Props) {
 
       {/* Calendar */}
       <div
-        className="bg-white rounded-xl border border-gray-200 p-4"
+        className="bg-card rounded-xl border border-border p-4"
         style={{ height: 680 }}
         dir="ltr"   // react-big-calendar is LTR internally; we flip labels via messages
       >
@@ -125,7 +125,7 @@ export default function CalendarClient({ events }: Props) {
           style={{ height: '100%' }}
           rtl={false}
           eventPropGetter={() => ({
-            style: { backgroundColor: '#3b82f6', border: 'none', borderRadius: 6 },
+            style: { backgroundColor: 'hsl(var(--primary))', border: 'none', borderRadius: 6 },
           })}
           dayPropGetter={d => {
             const today = new Date()
@@ -133,7 +133,7 @@ export default function CalendarClient({ events }: Props) {
               d.getDate() === today.getDate() &&
               d.getMonth() === today.getMonth() &&
               d.getFullYear() === today.getFullYear()
-            return isToday ? { style: { backgroundColor: '#eff6ff' } } : {}
+            return isToday ? { style: { backgroundColor: 'hsl(var(--primary) / 0.08)' } } : {}
           }}
         />
       </div>

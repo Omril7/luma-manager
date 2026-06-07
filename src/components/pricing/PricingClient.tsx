@@ -125,7 +125,7 @@ export default function PricingClient({ pricings, defaultHourlyRate }: Props) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">תמחור מוצרים</h1>
+        <h1 className="text-2xl font-bold text-foreground">תמחור מוצרים</h1>
         <Button onClick={openWizard}>
           <Plus className="h-4 w-4 ml-1" />
           תמחור חדש
@@ -134,11 +134,11 @@ export default function PricingClient({ pricings, defaultHourlyRate }: Props) {
 
       {/* Pricing History List */}
       {pricings.length === 0 ? (
-        <div className="bg-white rounded-lg border p-10 text-center text-gray-400">
+        <div className="bg-card rounded-lg border border-border p-10 text-center text-muted-foreground">
           אין תמחורים שמורים עדיין
         </div>
       ) : (
-        <div className="bg-white rounded-lg border divide-y">
+        <div className="bg-card rounded-lg border border-border divide-y divide-border">
           {pricings.map(p => (
             <div key={p.id} className="flex items-center justify-between p-4">
               <div
@@ -191,10 +191,10 @@ export default function PricingClient({ pricings, defaultHourlyRate }: Props) {
                 </div>
               )}
               <div className="grid grid-cols-2 gap-2 border-t pt-2">
-                <span className="text-gray-500">שעות עבודה</span><span>{detailPricing.time_hours} ש׳</span>
-                <span className="text-gray-500">ערך שעה</span><span>{ils(detailPricing.hourly_rate)}</span>
-                <span className="text-gray-500">הוצאות נלוות/שעה</span><span>{ils(detailPricing.overhead_per_hour)}</span>
-                <span className="text-gray-500">רווח</span>
+                <span className="text-muted-foreground">שעות עבודה</span><span>{detailPricing.time_hours} ש׳</span>
+                <span className="text-muted-foreground">ערך שעה</span><span>{ils(detailPricing.hourly_rate)}</span>
+                <span className="text-muted-foreground">הוצאות נלוות/שעה</span><span>{ils(detailPricing.overhead_per_hour)}</span>
+                <span className="text-muted-foreground">רווח</span>
                 <span>
                   {detailPricing.profit_type === 'percent'
                     ? `${detailPricing.profit_value}%`
@@ -454,20 +454,20 @@ function Step4({
       </div>
 
       {/* Price breakdown card */}
-      <div className="bg-gray-50 rounded-lg p-4 space-y-1 text-sm">
-        <div className="flex justify-between text-gray-600">
+      <div className="bg-muted/50 rounded-lg p-4 space-y-1 text-sm">
+        <div className="flex justify-between text-muted-foreground">
           <span>חומרי גלם</span><span>{materialsTotal.toLocaleString('he-IL')} ₪</span>
         </div>
-        <div className="flex justify-between text-gray-600">
+        <div className="flex justify-between text-muted-foreground">
           <span>עבודה</span><span>{laborTotal.toLocaleString('he-IL')} ₪</span>
         </div>
-        <div className="flex justify-between text-gray-600">
+        <div className="flex justify-between text-muted-foreground">
           <span>הוצאות נלוות</span><span>{overheadTotal.toLocaleString('he-IL')} ₪</span>
         </div>
         <div className="flex justify-between text-gray-600 border-t pt-1">
           <span>עלות בסיס</span><span>{costBase.toLocaleString('he-IL')} ₪</span>
         </div>
-        <div className="flex justify-between text-gray-600">
+        <div className="flex justify-between text-muted-foreground">
           <span>רווח</span><span>+ {profitAmount.toLocaleString('he-IL', { maximumFractionDigits: 0 })} ₪</span>
         </div>
         <div className="flex justify-between font-bold text-lg text-green-700 border-t pt-1">

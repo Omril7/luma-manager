@@ -3,6 +3,8 @@
 import { useTransition } from 'react'
 import { deleteEvent } from '@/app/(dashboard)/calendar/actions'
 import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 
 type CalendarEvent = {
   id: string
@@ -50,57 +52,52 @@ export default function EventPopup({ event, onEdit, onClose }: Props) {
     : null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-sm" dir="rtl">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-base font-bold truncate">{event.title}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none shrink-0">×</button>
-        </div>
+    <Dialog open onOpenChange={v => { if (!v) onClose() }}>
+      <DialogContent className="max-w-sm" dir="rtl">
+        <DialogHeader>
+          <DialogTitle className="truncate">{event.title}</DialogTitle>
+        </DialogHeader>
 
-        <div className="px-5 py-4 space-y-3 text-sm">
+        <div className="space-y-3 text-sm">
           <div>
-            <p className="text-xs text-gray-400 mb-0.5">התחלה</p>
-            <p className="text-gray-800">{formatDT(event.start_time, event.is_all_day)}</p>
+            <p className="text-xs text-muted-foreground mb-0.5">התחלה</p>
+            <p className="text-foreground">{formatDT(event.start_time, event.is_all_day)}</p>
           </div>
           {event.end_time && (
             <div>
-              <p className="text-xs text-gray-400 mb-0.5">סיום</p>
-              <p className="text-gray-800">{formatDT(event.end_time, event.is_all_day)}</p>
+              <p className="text-xs text-muted-foreground mb-0.5">סיום</p>
+              <p className="text-foreground">{formatDT(event.end_time, event.is_all_day)}</p>
             </div>
           )}
           {event.is_all_day && (
-            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">כל היום</span>
+            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">כל היום</span>
           )}
           {recurrenceLabel && (
             <div>
-              <p className="text-xs text-gray-400 mb-0.5">חזרה</p>
-              <p className="text-gray-800">{recurrenceLabel}</p>
+              <p className="text-xs text-muted-foreground mb-0.5">חזרה</p>
+              <p className="text-foreground">{recurrenceLabel}</p>
             </div>
           )}
           {event.description && (
             <div>
-              <p className="text-xs text-gray-400 mb-0.5">תיאור</p>
-              <p className="text-gray-700 whitespace-pre-wrap">{event.description}</p>
+              <p className="text-xs text-muted-foreground mb-0.5">תיאור</p>
+              <p className="text-foreground whitespace-pre-wrap">{event.description}</p>
             </div>
           )}
         </div>
 
-        <div className="flex gap-2 px-5 pb-5">
-          <button
-            onClick={onEdit}
-            className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
-          >
-            ערוך
-          </button>
-          <button
+        <DialogFooter className="gap-2">
+          <Button onClick={onEdit} className="flex-1">ערוך</Button>
+          <Button
+            variant="outline"
             onClick={handleDelete}
             disabled={isPending}
-            className="flex-1 border border-red-200 text-red-600 py-2 rounded-lg text-sm font-medium hover:bg-red-50 disabled:opacity-50"
+            className="flex-1 border-destructive/40 text-destructive hover:bg-destructive/10"
           >
             {isPending ? 'מוחק...' : 'מחק'}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

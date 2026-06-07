@@ -48,7 +48,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-background">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">הרשמה למערכת</CardTitle>
@@ -58,23 +58,23 @@ export default function RegisterPage() {
             <div className="space-y-1">
               <Label htmlFor="email">כתובת מייל</Label>
               <Input id="email" type="email" {...register('email')} />
-              {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
+              {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
             </div>
             <div className="space-y-1">
               <Label htmlFor="password">סיסמה</Label>
               <Input id="password" type="password" {...register('password')} />
-              {errors.password && <p className="text-sm text-red-500">{errors.password.message}</p>}
+              {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
             </div>
             <div className="space-y-1">
               <Label htmlFor="confirmPassword">אישור סיסמה</Label>
               <Input id="confirmPassword" type="password" {...register('confirmPassword')} />
-              {errors.confirmPassword && <p className="text-sm text-red-500">{errors.confirmPassword.message}</p>}
+              {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>}
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'נרשם...' : 'הרשמה'}
             </Button>
           </form>
-          <p className="text-center text-sm mt-4 text-gray-600">
+          <p className="text-center text-sm mt-4 text-muted-foreground">
             יש לך כבר חשבון?{' '}
             <Link href="/login" className="text-blue-600 hover:underline">
               כניסה

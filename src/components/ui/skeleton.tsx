@@ -2,13 +2,13 @@ import { cn } from '@/lib/utils'
 
 export function Skeleton({ className }: { className?: string }) {
   return (
-    <div className={cn('animate-pulse rounded-md bg-gray-200', className)} />
+    <div className={cn('animate-pulse rounded-md bg-muted', className)} />
   )
 }
 
 export function CardSkeleton() {
   return (
-    <div className="bg-white rounded-lg border p-4 space-y-2">
+    <div className="bg-card rounded-lg border border-border p-4 space-y-2">
       <Skeleton className="h-3 w-24" />
       <Skeleton className="h-7 w-32" />
     </div>
@@ -17,7 +17,7 @@ export function CardSkeleton() {
 
 export function TableSkeleton({ rows = 5 }: { rows?: number }) {
   return (
-    <div className="bg-white rounded-lg border divide-y">
+    <div className="bg-card rounded-lg border border-border divide-y divide-border">
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="flex gap-4 p-4">
           <Skeleton className="h-4 w-24" />

@@ -65,13 +65,13 @@ function SortableColumnRow({
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50"
+      className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted"
     >
       {/* Drag handle — works on both mouse and touch via @dnd-kit */}
       <button
         {...attributes}
         {...listeners}
-        className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing touch-none shrink-0"
+        className="text-muted-foreground/40 hover:text-muted-foreground cursor-grab active:cursor-grabbing touch-none shrink-0"
         aria-label="גרור לשינוי סדר"
       >
         <GripVertical size={14} />
@@ -81,7 +81,7 @@ function SortableColumnRow({
           type="checkbox"
           checked={visible}
           onChange={onToggle}
-          className="accent-blue-600"
+          className="accent-primary"
         />
         {label}
       </label>
@@ -92,9 +92,9 @@ function SortableColumnRow({
 // ─── Sort icon ────────────────────────────────────────────────────────────────
 
 function SortIcon({ dir }: { dir: 'asc' | 'desc' | null }) {
-  if (!dir) return <ArrowUpDown size={12} className="text-gray-300 inline ml-1" />
-  if (dir === 'asc') return <ArrowUp size={12} className="text-blue-500 inline ml-1" />
-  return <ArrowDown size={12} className="text-blue-500 inline ml-1" />
+  if (!dir) return <ArrowUpDown size={12} className="text-muted-foreground/40 inline ml-1" />
+  if (dir === 'asc') return <ArrowUp size={12} className="text-primary inline ml-1" />
+  return <ArrowDown size={12} className="text-primary inline ml-1" />
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -169,7 +169,7 @@ export default function DataTable<T>({
       <div className="flex justify-start mb-3">
         <button
           onClick={() => setShowSettings(v => !v)}
-          className="flex items-center gap-1.5 text-xs text-gray-500 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50"
+          className="flex items-center gap-1.5 text-xs text-muted-foreground border border-border rounded-lg px-2.5 py-1.5 hover:bg-muted"
         >
           <Settings2 size={13} />
           עמודות
@@ -184,8 +184,8 @@ export default function DataTable<T>({
             className="fixed inset-0 z-20"
             onClick={() => setShowSettings(false)}
           />
-          <div className="absolute top-9 right-0 z-30 bg-white border border-gray-200 rounded-xl shadow-lg p-4 w-56">
-            <p className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wide">
+          <div className="absolute top-9 right-0 z-30 bg-card border border-border rounded-xl shadow-lg p-4 w-56">
+            <p className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
               עמודות
             </p>
             <DndContext
@@ -218,11 +218,11 @@ export default function DataTable<T>({
       {/* Table */}
       <div className="overflow-x-auto">
         {sorted.length === 0 ? (
-          <p className="text-center text-gray-400 py-12">{emptyMessage}</p>
+          <p className="text-center text-muted-foreground py-12">{emptyMessage}</p>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-gray-500 border-b border-gray-100 text-right">
+              <tr className="text-muted-foreground border-b border-border text-right">
                 {visibleKeys.map(key => {
                   const col = colMap[key]
                   if (!col) return null
@@ -234,7 +234,7 @@ export default function DataTable<T>({
                       onClick={() => handleSortClick(key)}
                       className={[
                         'pb-3 pr-2 font-medium text-right whitespace-nowrap',
-                        canSort ? 'cursor-pointer select-none hover:text-gray-800' : '',
+                        canSort ? 'cursor-pointer select-none hover:text-foreground' : '',
                         col.className ?? '',
                       ].join(' ')}
                     >
@@ -245,9 +245,9 @@ export default function DataTable<T>({
                 })}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-border">
               {sorted.map(row => (
-                <tr key={rowKey(row)} className="hover:bg-gray-50">
+                <tr key={rowKey(row)} className="hover:bg-muted/50">
                   {visibleKeys.map(key => {
                     const col = colMap[key]
                     if (!col) return null

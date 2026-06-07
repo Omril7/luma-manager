@@ -1,26 +1,21 @@
 'use client'
 
-import { useRef, useState, useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { createCategory, updateCategoryVat, deleteCategory } from '@/app/(dashboard)/expenses/actions'
 import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
-type Category = {
-  id: string
-  name: string
-  is_vat_recognized: boolean
-}
-
-type Props = {
-  categories: Category[]
-  onClose: () => void
-}
+type Category = { id: string; name: string; is_vat_recognized: boolean }
+type Props = { categories: Category[]; onClose: () => void }
 
 export default function CategoryModal({ categories, onClose }: Props) {
   const [cats, setCats] = useState<Category[]>(categories)
   const [newName, setNewName] = useState('')
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
-  const formRef = useRef<HTMLFormElement>(null)
 
   function handleAdd() {
     if (!newName.trim()) return
@@ -29,10 +24,8 @@ export default function CategoryModal({ categories, onClose }: Props) {
     formData.set('is_vat_recognized', 'false')
     startTransition(async () => {
       const result = await createCategory(null, formData)
-      if (result.error) {
-        setError(result.error)
-        toast.error(result.error)
-      } else {
+      if (result.error) { setError(result.error); toast.error(result.error) }
+      else {
         setCats(prev => [...prev, { id: crypto.randomUUID(), name: newName.trim(), is_vat_recognized: false }])
         setNewName('')
         setError('')
@@ -51,46 +44,37 @@ export default function CategoryModal({ categories, onClose }: Props) {
   function handleDelete(catId: string) {
     startTransition(async () => {
       const result = await deleteCategory(catId)
-      if (result.error) {
-        setError(result.error)
-        toast.error(result.error)
-      } else {
-        setCats(prev => prev.filter(c => c.id !== catId))
-        toast.success('קטגוריה נמחקה')
-      }
+      if (result.error) { setError(result.error); toast.error(result.error) }
+      else { setCats(prev => prev.filter(c => c.id !== catId)); toast.success('קטגוריה נמחקה') }
     })
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6" dir="rtl">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold">ניהול קטגוריות</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
-        </div>
+    <Dialog open onOpenChange={v => { if (!v) onClose() }}>
+      <DialogContent className="max-w-md" dir="rtl">
+        <DialogHeader>
+          <DialogTitle>ניהול קטגוריות</DialogTitle>
+        </DialogHeader>
 
-        {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
+        {error && <p className="text-sm text-destructive">{error}</p>}
 
-        <div className="divide-y divide-gray-100 mb-4 max-h-64 overflow-y-auto">
-          {cats.length === 0 && <p className="text-sm text-gray-400 py-2">אין קטגוריות עדיין</p>}
+        <div className="divide-y divide-border max-h-64 overflow-y-auto">
+          {cats.length === 0 && <p className="text-sm text-muted-foreground py-2">אין קטגוריות עדיין</p>}
           {cats.map(cat => (
             <div key={cat.id} className="flex items-center justify-between py-2 gap-2">
               <span className="text-sm flex-1">{cat.name}</span>
-              <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
-                <input
-                  type="checkbox"
+              <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+                <Checkbox
                   checked={cat.is_vat_recognized}
-                  onChange={() => handleToggleVat(cat)}
+                  onCheckedChange={() => handleToggleVat(cat)}
                   disabled={isPending}
-                  className="accent-blue-600"
                 />
                 מוכר מע&quot;מ
               </label>
               <button
                 onClick={() => handleDelete(cat.id)}
                 disabled={isPending}
-                className="text-red-400 hover:text-red-600 text-sm px-1"
-                title="מחק קטגוריה"
+                className="text-xs text-destructive hover:underline disabled:opacity-50"
               >
                 מחק
               </button>
@@ -98,23 +82,16 @@ export default function CategoryModal({ categories, onClose }: Props) {
           ))}
         </div>
 
-        <form ref={formRef} onSubmit={e => { e.preventDefault(); handleAdd() }} className="flex gap-2">
-          <input
-            type="text"
+        <form onSubmit={e => { e.preventDefault(); handleAdd() }} className="flex gap-2 pt-2">
+          <Input
             value={newName}
             onChange={e => setNewName(e.target.value)}
             placeholder="שם קטגוריה חדשה"
-            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1"
           />
-          <button
-            type="submit"
-            disabled={isPending || !newName.trim()}
-            className="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-          >
-            הוסף
-          </button>
+          <Button type="submit" disabled={isPending || !newName.trim()}>הוסף</Button>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

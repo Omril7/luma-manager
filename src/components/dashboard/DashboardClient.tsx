@@ -140,7 +140,7 @@ export default function DashboardClient({
 
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-bold text-gray-900">תזרים מזומנים</h1>
+      <h1 className="text-2xl font-bold text-foreground">תזרים מזומנים</h1>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -152,10 +152,10 @@ export default function DashboardClient({
       </div>
 
       {/* Salary Control */}
-      <section className="bg-white rounded-lg border p-5 space-y-3">
-        <h2 className="font-semibold text-gray-800">שכר עצמי</h2>
+      <section className="bg-card rounded-lg border border-border p-5 space-y-3">
+        <h2 className="font-semibold text-foreground">שכר עצמי</h2>
         <div className="flex items-center gap-4">
-          <Label className="text-sm text-gray-600 whitespace-nowrap">אחוז מהרווח:</Label>
+          <Label className="text-sm text-muted-foreground whitespace-nowrap">אחוז מהרווח:</Label>
           <Input
             type="number"
             min={0}
@@ -165,17 +165,17 @@ export default function DashboardClient({
             onBlur={handlePaycheckBlur}
             className="w-24 text-center"
           />
-          <span className="text-gray-500 text-sm">%</span>
-          <span className="text-gray-700 font-medium">
+          <span className="text-muted-foreground text-sm">%</span>
+          <span className="text-foreground font-medium">
             משכורת חודשית: <strong>{ils(salary)}</strong>
           </span>
         </div>
       </section>
 
       {/* Authority Payments */}
-      <section className="bg-white rounded-lg border p-5 space-y-4">
+      <section className="bg-card rounded-lg border border-border p-5 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-gray-800">תשלומים לרשויות — {currentMonthLabel}</h2>
+          <h2 className="font-semibold text-foreground">תשלומים לרשויות — {currentMonthLabel}</h2>
           <Button size="sm" onClick={() => setShowAddPayment(true)}>
             <Plus className="h-4 w-4 ml-1" />
             הוסף תשלום
@@ -183,11 +183,11 @@ export default function DashboardClient({
         </div>
 
         {authorityPayments.length === 0 ? (
-          <p className="text-gray-400 text-sm">אין תשלומים לרשויות החודש</p>
+          <p className="text-muted-foreground text-sm">אין תשלומים לרשויות החודש</p>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-right border-b text-gray-500">
+              <tr className="text-right border-b border-border text-muted-foreground">
                 <th className="pb-2 font-medium">סוג</th>
                 <th className="pb-2 font-medium">סכום</th>
                 <th className="pb-2 font-medium">הערות</th>
@@ -199,7 +199,7 @@ export default function DashboardClient({
                 <tr key={p.id} className="border-b last:border-0">
                   <td className="py-2">{TYPE_LABELS[p.type] ?? p.type}</td>
                   <td className="py-2">{ils(p.amount)}</td>
-                  <td className="py-2 text-gray-500">{p.notes ?? '—'}</td>
+                  <td className="py-2 text-muted-foreground">{p.notes ?? '—'}</td>
                   <td className="py-2">
                     <Button
                       variant="ghost"
@@ -213,7 +213,7 @@ export default function DashboardClient({
                   </td>
                 </tr>
               ))}
-              <tr className="font-semibold bg-gray-50">
+              <tr className="font-semibold bg-muted/50">
                 <td className="py-2">סה&quot;כ</td>
                 <td className="py-2">{ils(authorityTotal)}</td>
                 <td />
@@ -266,12 +266,12 @@ export default function DashboardClient({
       </Dialog>
 
       {/* Running Balance Table */}
-      <section className="bg-white rounded-lg border p-5 space-y-4">
-        <h2 className="font-semibold text-gray-800">עובר ושב</h2>
+      <section className="bg-card rounded-lg border border-border p-5 space-y-4">
+        <h2 className="font-semibold text-foreground">עובר ושב</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-right border-b text-gray-500">
+              <tr className="text-right border-b border-border text-muted-foreground">
                 <th className="pb-2 font-medium">חודש</th>
                 <th className="pb-2 font-medium">יתרה פתיחה</th>
                 <th className="pb-2 font-medium">הכנסות</th>
@@ -286,11 +286,11 @@ export default function DashboardClient({
               {balanceRows.map(row => (
                 <tr
                   key={row.month}
-                  className={`border-b last:border-0 ${row.isLive ? 'bg-blue-50 font-medium' : ''}`}
+                  className={`border-b border-border last:border-0 ${row.isLive ? 'bg-primary/5 font-medium' : ''}`}
                 >
                   <td className="py-2">
                     {monthLabel(row.month)}
-                    {row.isLive && <span className="mr-1 text-xs text-blue-600">(שוטף)</span>}
+                    {row.isLive && <span className="mr-1 text-xs text-primary">(שוטף)</span>}
                   </td>
                   <td className="py-2">{ils(row.opening)}</td>
                   <td className="py-2 text-green-700">{ils(row.income)}</td>
@@ -328,13 +328,13 @@ export default function DashboardClient({
           </DialogHeader>
           {confirmClose && (
             <div className="space-y-3">
-              <p className="text-gray-700">
+              <p className="text-foreground">
                 האם לסגור את חודש <strong>{monthLabel(confirmClose.month)}</strong>?
               </p>
-              <p className="text-gray-700">
+              <p className="text-foreground">
                 היתרה הסופית תהיה: <strong className={confirmClose.closing >= 0 ? 'text-green-700' : 'text-red-600'}>{ils(confirmClose.closing)}</strong>
               </p>
-              <p className="text-xs text-gray-500">פעולה זו תנעל את נתוני החודש.</p>
+              <p className="text-xs text-muted-foreground">פעולה זו תנעל את נתוני החודש.</p>
             </div>
           )}
           <DialogFooter>
@@ -349,9 +349,9 @@ export default function DashboardClient({
 
 function Card({ label, value, highlight }: { label: string; value: string; highlight?: 'green' | 'red' }) {
   return (
-    <div className="bg-white rounded-lg border p-4 space-y-1">
-      <p className="text-xs text-gray-500">{label}</p>
-      <p className={`text-xl font-bold ${highlight === 'green' ? 'text-green-700' : highlight === 'red' ? 'text-red-600' : 'text-gray-900'}`}>
+    <div className="bg-card rounded-lg border border-border p-4 space-y-1">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className={`text-xl font-bold ${highlight === 'green' ? 'text-green-700 dark:text-green-400' : highlight === 'red' ? 'text-red-600 dark:text-red-400' : 'text-foreground'}`}>
         {value}
       </p>
     </div>

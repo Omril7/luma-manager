@@ -61,8 +61,8 @@ export default function ProductBreakdownTable({ rows }: Props) {
   if (data.length === 0) return null
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
-      <h3 className="text-sm font-medium text-gray-700 mb-4">פירוט לפי מוצר</h3>
+    <div className="bg-card rounded-xl border border-border p-5">
+      <h3 className="text-sm font-medium text-muted-foreground mb-4">פירוט לפי מוצר</h3>
       <DataTable
         columns={columns}
         data={data}

@@ -43,8 +43,8 @@ export default function ExpensesCharts({ installments, isAnnual, year, month }: 
     })
 
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h3 className="text-sm font-medium text-gray-700 mb-4">הוצאות לפי חודש — {year}</h3>
+      <div className="bg-card rounded-xl border border-border p-5">
+        <h3 className="text-sm font-medium text-muted-foreground mb-4">הוצאות לפי חודש — {year}</h3>
         <ResponsiveContainer width="100%" height={260}>
           <BarChart data={monthlyTotals} margin={{ top: 4, right: 4, left: 4, bottom: 4 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
@@ -75,8 +75,8 @@ export default function ExpensesCharts({ installments, isAnnual, year, month }: 
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
-      <h3 className="text-sm font-medium text-gray-700 mb-4">הוצאות לפי קטגוריה</h3>
+    <div className="bg-card rounded-xl border border-border p-5">
+      <h3 className="text-sm font-medium text-muted-foreground mb-4">הוצאות לפי קטגוריה</h3>
       <ResponsiveContainer width="100%" height={260}>
         <PieChart>
           <Pie

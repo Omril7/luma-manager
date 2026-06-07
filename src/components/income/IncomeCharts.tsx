@@ -34,8 +34,8 @@ export default function IncomeCharts({ rows, isAnnual, year, month }: Props) {
     })
 
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h3 className="text-sm font-medium text-gray-700 mb-4">הכנסות לפי חודש — {year}</h3>
+      <div className="bg-card rounded-xl border border-border p-5">
+        <h3 className="text-sm font-medium text-muted-foreground mb-4">הכנסות לפי חודש — {year}</h3>
         <ResponsiveContainer width="100%" height={240}>
           <BarChart data={data} margin={{ top: 4, right: 4, left: 4, bottom: 4 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
@@ -67,8 +67,8 @@ export default function IncomeCharts({ rows, isAnnual, year, month }: Props) {
   })
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
-      <h3 className="text-sm font-medium text-gray-700 mb-4">הכנסות יומיות — {MONTH_NAMES[month - 1]}</h3>
+    <div className="bg-card rounded-xl border border-border p-5">
+      <h3 className="text-sm font-medium text-muted-foreground mb-4">הכנסות יומיות — {MONTH_NAMES[month - 1]}</h3>
       <ResponsiveContainer width="100%" height={240}>
         <BarChart data={dailyData} margin={{ top: 4, right: 4, left: 4, bottom: 4 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />

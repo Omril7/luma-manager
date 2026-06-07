@@ -59,7 +59,7 @@ export function PasskeyManager() {
         <ul className="space-y-2">
           {passkeys.map(pk => (
             <li key={pk.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span className="text-gray-700">
+              <span className="text-foreground">
                 {pk.friendly_name || 'מפתח גישה'}
                 <span className="mr-2 text-xs text-muted-foreground">
                   {new Date(pk.created_at).toLocaleDateString('he-IL')}

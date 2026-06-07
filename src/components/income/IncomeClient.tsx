@@ -72,10 +72,10 @@ export default function IncomeClient({ products, incomeRows }: Props) {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h1 className="text-2xl font-bold text-gray-900">הכנסות</h1>
+        <h1 className="text-2xl font-bold text-foreground">הכנסות</h1>
         <button
           onClick={() => setShowProductsModal(true)}
-          className="text-sm text-gray-600 border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50"
+          className="text-sm text-muted-foreground border border-border rounded-lg px-3 py-2 hover:bg-muted"
         >
           ניהול מוצרים
         </button>
@@ -87,25 +87,25 @@ export default function IncomeClient({ products, incomeRows }: Props) {
       {/* Filter bar */}
       <div className="flex items-center gap-4 flex-wrap">
         {!isAnnual && (
-          <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
-            <button onClick={prevMonth} className="text-gray-400 hover:text-gray-700 text-lg leading-none">→</button>
+          <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2">
+            <button onClick={prevMonth} className="text-muted-foreground hover:text-foreground text-lg leading-none">→</button>
             <span className="text-sm font-medium min-w-[120px] text-center">
               {MONTH_NAMES[month - 1]} {year}
             </span>
-            <button onClick={nextMonth} className="text-gray-400 hover:text-gray-700 text-lg leading-none">←</button>
+            <button onClick={nextMonth} className="text-muted-foreground hover:text-foreground text-lg leading-none">←</button>
           </div>
         )}
         <button
           onClick={() => setIsAnnual(v => !v)}
-          className={`text-sm px-4 py-2 rounded-lg border transition-colors ${isAnnual ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+          className={`text-sm px-4 py-2 rounded-lg border transition-colors ${isAnnual ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-muted-foreground border-border hover:bg-muted'}`}
         >
           דוח שנתי
         </button>
         {isAnnual && (
-          <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
-            <button onClick={() => setYear(y => y - 1)} className="text-gray-400 hover:text-gray-700 text-lg leading-none">→</button>
+          <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2">
+            <button onClick={() => setYear(y => y - 1)} className="text-muted-foreground hover:text-foreground text-lg leading-none">→</button>
             <span className="text-sm font-medium w-16 text-center">{year}</span>
-            <button onClick={() => setYear(y => y + 1)} className="text-gray-400 hover:text-gray-700 text-lg leading-none">←</button>
+            <button onClick={() => setYear(y => y + 1)} className="text-muted-foreground hover:text-foreground text-lg leading-none">←</button>
           </div>
         )}
       </div>
@@ -122,7 +122,7 @@ export default function IncomeClient({ products, incomeRows }: Props) {
       <ProductBreakdownTable rows={isAnnual ? annualRows : monthRows} />
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
+      <div className="bg-card rounded-xl border border-border p-5">
         <h2 className="text-base font-semibold text-gray-800 mb-4">רשימת הכנסות</h2>
         <IncomeTable
           rows={incomeRows}
