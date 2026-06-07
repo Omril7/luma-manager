@@ -19,8 +19,8 @@ Manual tasks that require dashboard access, credentials, or external services.
 ### Enable Passkeys
 - [ ] Go to **Authentication → Passkeys** in the Supabase Dashboard
 - [ ] Set **Relying Party Display Name**: `מנהל כספים` (or your business name)
-- [ ] Set **Relying Party ID**: `localhost` (for dev) / your domain (for prod)
-- [ ] Set **Relying Party Origins**: `http://localhost:3000` (for dev) / `https://yourdomain.com` (for prod)
+- [ ] Set **Relying Party ID**: `localhost` (for dev) / `luma-manager.vercel.app` (for prod)
+- [ ] Set **Relying Party Origins**: `http://localhost:3000` (for dev) / `https://luma-manager.vercel.app` (for prod)
 
 ---
 

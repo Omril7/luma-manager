@@ -757,7 +757,7 @@ GMAIL_APP_PASSWORD=
 WEBHOOK_SECRET=
 
 # App
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_APP_URL=https://luma-manager.vercel.app
 ```
 
 ---
