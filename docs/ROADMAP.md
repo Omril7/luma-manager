@@ -25,10 +25,10 @@
 - [x] Annual report toggle
 
 ## Phase 4 — Summary Email
-- [ ] Configure Nodemailer with Gmail SMTP
-- [ ] API route POST /api/send-summary
-- [ ] Attach receipts as files in the email
-- [ ] UI: month picker modal + send button
+- [x] Configure Nodemailer with Gmail SMTP
+- [x] API route POST /api/send-summary
+- [x] Attach receipts as files in the email
+- [x] UI: month picker modal + send button
 
 ## Phase 5 — Income
 - [ ] Basic product management (CRUD)

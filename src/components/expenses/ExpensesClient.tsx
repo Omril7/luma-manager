@@ -6,6 +6,7 @@ import ExpensesTable from './ExpensesTable'
 import ExpensesCharts from './ExpensesCharts'
 import ExpenseModal from './ExpenseModal'
 import CategoryModal from './CategoryModal'
+import SendSummaryModal from './SendSummaryModal'
 
 type Category = {
   id: string
@@ -51,17 +52,19 @@ type Props = {
   expenses: Expense[]
   allInstallments: Installment[]
   vatRate: number
+  hasGmailConfig: boolean
 }
 
 const MONTH_NAMES = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר']
 
-export default function ExpensesClient({ categories, expenses, allInstallments, vatRate }: Props) {
+export default function ExpensesClient({ categories, expenses, allInstallments, vatRate, hasGmailConfig }: Props) {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [isAnnual, setIsAnnual] = useState(false)
   const [showExpenseModal, setShowExpenseModal] = useState(false)
   const [showCategoryModal, setShowCategoryModal] = useState(false)
+  const [showSummaryModal, setShowSummaryModal] = useState(false)
   const [editingExpense, setEditingExpense] = useState<Expense | undefined>(undefined)
 
   const filterMonth = `${year}-${String(month).padStart(2, '0')}`
@@ -92,14 +95,22 @@ export default function ExpensesClient({ categories, expenses, allInstallments, 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <h1 className="text-2xl font-bold text-gray-900">הוצאות</h1>
-        <button
-          onClick={() => setShowCategoryModal(true)}
-          className="text-sm text-gray-600 border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50"
-        >
-          נהל קטגוריות
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowCategoryModal(true)}
+            className="text-sm text-gray-600 border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50"
+          >
+            נהל קטגוריות
+          </button>
+          <button
+            onClick={() => setShowSummaryModal(true)}
+            className="text-sm bg-blue-600 text-white rounded-lg px-3 py-2 hover:bg-blue-700"
+          >
+            שלח סיכום חודשי
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -172,6 +183,13 @@ export default function ExpensesClient({ categories, expenses, allInstallments, 
         <CategoryModal
           categories={categories}
           onClose={() => setShowCategoryModal(false)}
+        />
+      )}
+
+      {showSummaryModal && (
+        <SendSummaryModal
+          hasGmailConfig={hasGmailConfig}
+          onClose={() => setShowSummaryModal(false)}
         />
       )}
     </div>

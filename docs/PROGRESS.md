@@ -1,3 +1,10 @@
+## [2026-06-07] Phase 4 — Summary Email
+- POST /api/send-summary: loads installments for the requested month, builds Hebrew HTML email with two sections (VAT-recognized business expenses + personal expenses), downloads receipt files from Cloudinary and attaches them
+- SendSummaryModal: month/year picker, preview of what will be sent, warning when Gmail not configured, success state with stats (expense counts, attachment count)
+- "שלח סיכום חודשי" button added to expenses page header
+- Email sent to the gmail_user address configured in settings
+- hasGmailConfig flag passed from server page to client to show warning inline
+
 ## [2026-06-07] Phase 3 — Expenses
 - Category management modal: CRUD, VAT-recognized toggle, delete guard (disabled if category in use)
 - Add/edit expense modal: description, category, amount (VAT-inclusive), date, recurring, installments (N payments), personal flag, multi-file receipt upload
