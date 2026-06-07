@@ -31,10 +31,10 @@
 - [x] UI: month picker modal + send button
 
 ## Phase 5 — Income
-- [ ] Basic product management (CRUD)
-- [ ] Manual income entry form (discount, payment on delivery)
-- [ ] Income view: summary cards + charts + product breakdown table
-- [ ] Webhook stub at POST /api/webhooks/store
+- [x] Basic product management (CRUD)
+- [x] Manual income entry form (discount, payment on delivery)
+- [x] Income view: summary cards + charts + product breakdown table
+- [x] Webhook stub at POST /api/webhooks/store
 
 ## Phase 6 — Calendar
 - [ ] Install react-big-calendar with Hebrew locale + RTL

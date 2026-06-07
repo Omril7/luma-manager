@@ -1,3 +1,11 @@
+## [2026-06-07] Phase 5 — Income
+- Product management modal: CRUD (create, delete), used in income modal combobox
+- Add/edit income form: product name (free text or select from products), order ID, original price, optional discount, read-only final price, payment on delivery flag, date, notes
+- Income page: 4 summary cards (total, count, total discounts, net), monthly daily bar chart, annual monthly bar chart, product breakdown table, income table with month filter
+- POST /api/webhooks/store: fully implemented with x-webhook-secret validation, Zod schema, auto product creation by external_id, source='store'
+- Webhook requires user_id in payload — noted in DECISIONS.md as the spec doesn't define user resolution
+- Build passes cleanly
+
 ## [2026-06-07] Phase 4 — Summary Email
 - POST /api/send-summary: loads installments for the requested month, builds Hebrew HTML email with two sections (VAT-recognized business expenses + personal expenses), downloads receipt files from Cloudinary and attaches them
 - SendSummaryModal: month/year picker, preview of what will be sent, warning when Gmail not configured, success state with stats (expense counts, attachment count)
