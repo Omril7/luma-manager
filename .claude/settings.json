@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(npx supabase *)",
+      "Bash(npx shadcn *)",
+      "Bash(npm install *)",
+      "Bash(mkdir -p *)",
+      "Bash(touch *)"
+    ],
+    "deny": [
+      "Bash(rm -rf /)",
+      "Bash(curl * | bash)"
+    ]
+  }
+}
