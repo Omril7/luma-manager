@@ -15,14 +15,14 @@
 - [x] Save and read from settings table
 
 ## Phase 3 — Expenses
-- [ ] Category management (CRUD + VAT recognized toggle)
-- [ ] Add expense form: installments, recurring, personal flags
-- [ ] VAT logic for installments via lib/vat.ts
-- [ ] Receipt upload to Cloudinary (server-side)
-- [ ] Expenses view: table + month filter
-- [ ] Summary cards: total, net of VAT, VAT only
-- [ ] Recharts: bar chart (monthly) + pie chart (by category)
-- [ ] Annual report toggle
+- [x] Category management (CRUD + VAT recognized toggle)
+- [x] Add expense form: installments, recurring, personal flags
+- [x] VAT logic for installments via lib/vat.ts
+- [x] Receipt upload to Cloudinary (server-side)
+- [x] Expenses view: table + month filter
+- [x] Summary cards: total, net of VAT, VAT only
+- [x] Recharts: bar chart (monthly) + pie chart (by category)
+- [x] Annual report toggle
 
 ## Phase 4 — Summary Email
 - [ ] Configure Nodemailer with Gmail SMTP

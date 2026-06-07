@@ -1,3 +1,17 @@
+## [2026-06-07] Phase 3 — Expenses
+- Category management modal: CRUD, VAT-recognized toggle, delete guard (disabled if category in use)
+- Add/edit expense modal: description, category, amount (VAT-inclusive), date, recurring, installments (N payments), personal flag, multi-file receipt upload
+- Server actions: createExpense, updateExpense, deleteExpense, createCategory, updateCategoryVat, deleteCategory, ensureRecurringInstallments
+- VAT logic exclusively via lib/vat.ts — installmentVat() applied on installment #1 only
+- Receipt upload via Cloudinary server action (uploadFile utility)
+- Expenses table with month filter — shows installment number (X of Y) per row
+- Summary cards: total, net of VAT, VAT only (business expenses only)
+- Recharts: pie chart (monthly, by category) + bar chart (annual, by month)
+- Annual report toggle with year picker
+- Recurring expense auto-creation: ensureRecurringInstallments() runs on page load
+- Build passes cleanly (npm run build)
+- Deviations: Supabase join types required `as unknown as` cast since generated types.ts doesn't include relation shapes
+
 ## [2026-06-07] Phase 2 — Settings & User
 - Settings page with 4 sections: כללי, עובר ושב, מייל, חשבון
 - Server Actions for each section with Zod validation

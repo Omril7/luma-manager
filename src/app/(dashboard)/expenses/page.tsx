@@ -1,8 +1,58 @@
-export default function ExpensesPage() {
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import ExpensesClient from '@/components/expenses/ExpensesClient'
+import { ensureRecurringInstallments } from './actions'
+
+export default async function ExpensesPage() {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  // Auto-create recurring installments for this month
+  await ensureRecurringInstallments()
+
+  const [
+    { data: categories },
+    { data: settings },
+    { data: expenses },
+    { data: allInstallments },
+  ] = await Promise.all([
+    supabase
+      .from('expense_categories')
+      .select('id, name, is_vat_recognized')
+      .eq('user_id', user.id)
+      .order('name'),
+    supabase
+      .from('settings')
+      .select('vat_rate')
+      .eq('user_id', user.id)
+      .single(),
+    supabase
+      .from('expenses')
+      .select(`
+        id, description, category_id, total_amount, transaction_date,
+        is_recurring, installments_total, is_personal, notes,
+        expense_categories(id, name, is_vat_recognized),
+        receipts(id, cloudinary_url, file_type),
+        expense_installments(id, installment_number, due_month, amount, vat_amount)
+      `)
+      .eq('user_id', user.id)
+      .order('transaction_date', { ascending: false }),
+    supabase
+      .from('expense_installments')
+      .select(`
+        id, installment_number, due_month, amount, vat_amount,
+        expenses!inner(is_personal, expense_categories(name, is_vat_recognized))
+      `)
+      .eq('user_id', user.id),
+  ])
+
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">הוצאות</h1>
-      <p className="text-gray-500">בקרוב — Phase 3</p>
-    </div>
+    <ExpensesClient
+      categories={categories ?? []}
+      expenses={(expenses ?? []) as unknown as Parameters<typeof ExpensesClient>[0]['expenses']}
+      allInstallments={(allInstallments ?? []) as unknown as Parameters<typeof ExpensesClient>[0]['allInstallments']}
+      vatRate={settings?.vat_rate ?? 18}
+    />
   )
 }
