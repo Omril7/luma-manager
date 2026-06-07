@@ -1,7 +1,16 @@
+import DataTable, { type ColumnDef } from '@/components/ui/DataTable'
+
 type IncomeRow = {
   product_name: string
   final_price: number
   discount_amount: number
+}
+
+type ProductStat = {
+  name: string
+  units: number
+  revenue: number
+  discountLoss: number
 }
 
 type Props = {
@@ -12,44 +21,54 @@ function fmt(n: number) {
   return n.toLocaleString('he-IL', { style: 'currency', currency: 'ILS', maximumFractionDigits: 2 })
 }
 
+const columns: ColumnDef<ProductStat>[] = [
+  {
+    key: 'name',
+    header: 'מוצר',
+    sortValue: r => r.name,
+    render: r => <span className="font-medium">{r.name}</span>,
+  },
+  {
+    key: 'units',
+    header: 'יחידות',
+    sortValue: r => r.units,
+    render: r => <span className="text-gray-600">{r.units}</span>,
+  },
+  {
+    key: 'revenue',
+    header: 'סה"כ הכנסה',
+    sortValue: r => r.revenue,
+    render: r => <span className="text-green-700 font-medium">{fmt(r.revenue)}</span>,
+  },
+  {
+    key: 'discountLoss',
+    header: 'אובדן הנחות',
+    sortValue: r => r.discountLoss,
+    render: r => <span className="text-orange-600">{r.discountLoss > 0 ? fmt(r.discountLoss) : '—'}</span>,
+  },
+]
+
 export default function ProductBreakdownTable({ rows }: Props) {
-  const byProduct = rows.reduce<Record<string, { units: number; revenue: number; discountLoss: number }>>((acc, r) => {
-    if (!acc[r.product_name]) acc[r.product_name] = { units: 0, revenue: 0, discountLoss: 0 }
+  const byProduct = rows.reduce<Record<string, ProductStat>>((acc, r) => {
+    if (!acc[r.product_name]) acc[r.product_name] = { name: r.product_name, units: 0, revenue: 0, discountLoss: 0 }
     acc[r.product_name].units += 1
     acc[r.product_name].revenue += r.final_price
     acc[r.product_name].discountLoss += r.discount_amount
     return acc
   }, {})
 
-  const entries = Object.entries(byProduct).sort((a, b) => b[1].revenue - a[1].revenue)
-
-  if (entries.length === 0) return null
+  const data = Object.values(byProduct).sort((a, b) => b.revenue - a.revenue)
+  if (data.length === 0) return null
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5">
       <h3 className="text-sm font-medium text-gray-700 mb-4">פירוט לפי מוצר</h3>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-gray-500 border-b border-gray-100 text-right">
-              <th className="pb-3 pr-2 font-medium">מוצר</th>
-              <th className="pb-3 pr-2 font-medium">יחידות</th>
-              <th className="pb-3 pr-2 font-medium">סה&quot;כ הכנסה</th>
-              <th className="pb-3 font-medium">אובדן הנחות</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {entries.map(([name, stats]) => (
-              <tr key={name} className="hover:bg-gray-50">
-                <td className="py-3 pr-2 font-medium">{name}</td>
-                <td className="py-3 pr-2 text-gray-600">{stats.units}</td>
-                <td className="py-3 pr-2 text-green-700 font-medium">{fmt(stats.revenue)}</td>
-                <td className="py-3 text-orange-600">{stats.discountLoss > 0 ? fmt(stats.discountLoss) : '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={data}
+        rowKey={r => r.name}
+        emptyMessage="אין נתונים"
+      />
     </div>
   )
 }

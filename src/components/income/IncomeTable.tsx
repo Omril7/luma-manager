@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useTransition } from 'react'
 import { deleteIncome } from '@/app/(dashboard)/income/actions'
+import DataTable, { type ColumnDef } from '@/components/ui/DataTable'
 
 type IncomeRow = {
   id: string
@@ -29,74 +30,93 @@ function fmt(n: number) {
 
 export default function IncomeTable({ rows, filterMonth, onEdit }: Props) {
   const [isPending, startTransition] = useTransition()
-  const [deletingId, setDeletingId] = useState<string | null>(null)
-
-  const filtered = rows.filter(r => r.income_date.slice(0, 7) === filterMonth)
 
   function handleDelete(id: string) {
     if (!confirm('למחוק הכנסה זו?')) return
-    setDeletingId(id)
-    startTransition(async () => {
-      await deleteIncome(id)
-      setDeletingId(null)
-    })
+    startTransition(async () => { await deleteIncome(id) })
   }
 
-  if (filtered.length === 0) {
-    return <p className="text-center text-gray-400 py-12">אין הכנסות לחודש זה</p>
-  }
+  const filtered = rows.filter(r => r.income_date.slice(0, 7) === filterMonth)
+
+  const columns: ColumnDef<IncomeRow>[] = [
+    {
+      key: 'income_date',
+      header: 'תאריך',
+      sortValue: r => r.income_date,
+      render: r => <span className="text-gray-600">{new Date(r.income_date).toLocaleDateString('he-IL')}</span>,
+    },
+    {
+      key: 'product_name',
+      header: 'מוצר',
+      sortValue: r => r.product_name,
+      render: r => <span className="font-medium">{r.product_name}</span>,
+    },
+    {
+      key: 'order_id',
+      header: 'מספר הזמנה',
+      render: r => <span className="text-gray-500 text-xs">{r.order_id ?? '—'}</span>,
+      defaultHidden: true,
+    },
+    {
+      key: 'original_price',
+      header: 'מחיר מקורי',
+      sortValue: r => r.original_price,
+      render: r => fmt(r.original_price),
+    },
+    {
+      key: 'discount_amount',
+      header: 'הנחה',
+      sortValue: r => r.discount_amount,
+      render: r => <span className="text-orange-600">{r.discount_amount > 0 ? fmt(r.discount_amount) : '—'}</span>,
+    },
+    {
+      key: 'final_price',
+      header: 'מחיר סופי',
+      sortValue: r => r.final_price,
+      render: r => <span className="font-medium text-green-700">{fmt(r.final_price)}</span>,
+    },
+    {
+      key: 'payment_on_delivery',
+      header: 'מסירה',
+      render: r =>
+        r.payment_on_delivery
+          ? <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">במסירה</span>
+          : <span className="text-gray-400">—</span>,
+    },
+    {
+      key: 'source',
+      header: 'מקור',
+      sortValue: r => r.source,
+      render: r => (
+        <span className={`text-xs px-2 py-0.5 rounded-full ${r.source === 'store' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>
+          {r.source === 'store' ? 'חנות' : 'ידני'}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: 'פעולות',
+      render: r => (
+        <div className="flex gap-2">
+          <button onClick={() => onEdit(r)} className="text-gray-400 hover:text-blue-600 text-xs">ערוך</button>
+          <button
+            onClick={() => handleDelete(r.id)}
+            disabled={isPending}
+            className="text-gray-400 hover:text-red-600 text-xs disabled:opacity-50"
+          >
+            מחק
+          </button>
+        </div>
+      ),
+    },
+  ]
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-gray-500 border-b border-gray-100 text-right">
-            <th className="pb-3 pr-2 font-medium">תאריך</th>
-            <th className="pb-3 pr-2 font-medium">מוצר</th>
-            <th className="pb-3 pr-2 font-medium">מספר הזמנה</th>
-            <th className="pb-3 pr-2 font-medium">מחיר מקורי</th>
-            <th className="pb-3 pr-2 font-medium">הנחה</th>
-            <th className="pb-3 pr-2 font-medium">מחיר סופי</th>
-            <th className="pb-3 pr-2 font-medium">מסירה</th>
-            <th className="pb-3 pr-2 font-medium">מקור</th>
-            <th className="pb-3 font-medium">פעולות</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-50">
-          {filtered.map(row => (
-            <tr key={row.id} className="hover:bg-gray-50">
-              <td className="py-3 pr-2 text-gray-600">{new Date(row.income_date).toLocaleDateString('he-IL')}</td>
-              <td className="py-3 pr-2 font-medium">{row.product_name}</td>
-              <td className="py-3 pr-2 text-gray-500 text-xs">{row.order_id ?? '—'}</td>
-              <td className="py-3 pr-2">{fmt(row.original_price)}</td>
-              <td className="py-3 pr-2 text-orange-600">{row.discount_amount > 0 ? fmt(row.discount_amount) : '—'}</td>
-              <td className="py-3 pr-2 font-medium text-green-700">{fmt(row.final_price)}</td>
-              <td className="py-3 pr-2">
-                {row.payment_on_delivery
-                  ? <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">במסירה</span>
-                  : '—'}
-              </td>
-              <td className="py-3 pr-2">
-                <span className={`text-xs px-2 py-0.5 rounded-full ${row.source === 'store' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>
-                  {row.source === 'store' ? 'חנות' : 'ידני'}
-                </span>
-              </td>
-              <td className="py-3">
-                <div className="flex gap-2">
-                  <button onClick={() => onEdit(row)} className="text-gray-400 hover:text-blue-600 text-xs">ערוך</button>
-                  <button
-                    onClick={() => handleDelete(row.id)}
-                    disabled={isPending && deletingId === row.id}
-                    className="text-gray-400 hover:text-red-600 text-xs disabled:opacity-50"
-                  >
-                    מחק
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <DataTable
+      columns={columns}
+      data={filtered}
+      rowKey={r => r.id}
+      emptyMessage="אין הכנסות לחודש זה"
+    />
   )
 }
