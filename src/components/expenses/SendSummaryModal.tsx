@@ -2,18 +2,18 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { MonthPicker, type MonthPickerValue } from '@/components/ui/month-picker'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-
-const MONTH_NAMES = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר']
 
 type Props = { onClose: () => void; hasGmailConfig: boolean }
 
 export default function SendSummaryModal({ onClose, hasGmailConfig }: Props) {
   const now = new Date()
-  const [year, setYear] = useState(now.getFullYear())
-  const [month, setMonth] = useState(now.getMonth() + 1)
+  const [monthValue, setMonthValue] = useState<MonthPickerValue>({
+    month: now.getMonth() + 1,
+    year: now.getFullYear(),
+  })
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle')
   const [error, setError] = useState('')
   const [stats, setStats] = useState<{ vatRecognizedCount: number; personalCount: number; attachmentCount: number } | null>(null)
@@ -24,7 +24,7 @@ export default function SendSummaryModal({ onClose, hasGmailConfig }: Props) {
       const res = await fetch('/api/send-summary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ year, month }),
+        body: JSON.stringify({ year: monthValue.year, month: monthValue.month }),
       })
       const data = await res.json() as { success?: boolean; error?: string; stats?: typeof stats }
       if (!res.ok || data.error) { setError(data.error ?? 'שגיאה בשליחת המייל'); setStatus('error') }
@@ -64,18 +64,7 @@ export default function SendSummaryModal({ onClose, hasGmailConfig }: Props) {
 
             <div className="space-y-1.5">
               <Label>חודש לדוח</Label>
-              <div className="flex gap-3">
-                <select
-                  value={month}
-                  onChange={e => setMonth(Number(e.target.value))}
-                  className="flex-1 h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                >
-                  {MONTH_NAMES.map((name, i) => (
-                    <option key={i + 1} value={i + 1}>{name}</option>
-                  ))}
-                </select>
-                <Input type="number" value={year} onChange={e => setYear(Number(e.target.value))} min={2020} max={2099} className="w-24" />
-              </div>
+              <MonthPicker value={monthValue} onChange={setMonthValue} />
             </div>
 
             <div className="bg-muted rounded-lg px-4 py-3 text-sm text-muted-foreground space-y-1">

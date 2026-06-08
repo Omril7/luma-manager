@@ -5,8 +5,10 @@ import { createCategory, updateCategoryVat, deleteCategory } from '@/app/(dashbo
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Switch } from '@/components/ui/switch'
+import { Trash2, Tag, Plus } from 'lucide-react'
 
 type Category = { id: string; name: string; is_vat_recognized: boolean }
 type Props = { categories: Category[]; onClose: () => void }
@@ -56,40 +58,69 @@ export default function CategoryModal({ categories, onClose }: Props) {
           <DialogTitle>ניהול קטגוריות</DialogTitle>
         </DialogHeader>
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && (
+          <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2">{error}</p>
+        )}
 
-        <div className="divide-y divide-border max-h-64 overflow-y-auto">
-          {cats.length === 0 && <p className="text-sm text-muted-foreground py-2">אין קטגוריות עדיין</p>}
+        <div className="space-y-2 max-h-72 overflow-y-auto pl-1">
+          {cats.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-8 text-muted-foreground gap-2">
+              <Tag className="h-8 w-8 opacity-30" />
+              <p className="text-sm">אין קטגוריות עדיין</p>
+            </div>
+          )}
+
           {cats.map(cat => (
-            <div key={cat.id} className="flex items-center justify-between py-2 gap-2">
-              <span className="text-sm flex-1">{cat.name}</span>
-              <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
-                <Checkbox
+            <div
+              key={cat.id}
+              className="flex items-center gap-3 bg-muted/40 hover:bg-muted/60 border border-border rounded-xl px-3 py-2.5 transition-colors"
+            >
+              <Tag className="h-4 w-4 text-muted-foreground shrink-0" />
+
+              <span className="text-sm font-medium flex-1 min-w-0 truncate">{cat.name}</span>
+
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="text-xs text-muted-foreground hidden sm:inline">מוכר מע&quot;מ</span>
+                <Switch
                   checked={cat.is_vat_recognized}
                   onCheckedChange={() => handleToggleVat(cat)}
                   disabled={isPending}
+                  aria-label={cat.is_vat_recognized ? 'הוצאה מוכרת מע"מ' : 'הוצאה אינה מוכרת מע"מ'}
                 />
-                מוכר מע&quot;מ
-              </label>
+              </div>
+
               <button
+                type="button"
                 onClick={() => handleDelete(cat.id)}
                 disabled={isPending}
-                className="text-xs text-destructive hover:underline disabled:opacity-50"
+                title="מחק קטגוריה"
+                className="shrink-0 p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-40"
               >
-                מחק
+                <Trash2 className="h-3.5 w-3.5" />
               </button>
             </div>
           ))}
         </div>
 
-        <form onSubmit={e => { e.preventDefault(); handleAdd() }} className="flex gap-2 pt-2">
-          <Input
-            value={newName}
-            onChange={e => setNewName(e.target.value)}
-            placeholder="שם קטגוריה חדשה"
-            className="flex-1"
-          />
-          <Button type="submit" disabled={isPending || !newName.trim()}>הוסף</Button>
+        <form
+          onSubmit={e => { e.preventDefault(); handleAdd() }}
+          className="flex gap-2 pt-2 border-t border-border"
+        >
+          <div className="flex-1 space-y-1">
+            <Label className="text-xs text-muted-foreground">קטגוריה חדשה</Label>
+            <Input
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+              placeholder="למשל: ציוד משרדי"
+              className="flex-1"
+            />
+          </div>
+          <div className="flex items-end">
+            <Button type="submit" disabled={isPending || !newName.trim()} size="sm">
+              <Plus className="h-4 w-4 ml-1" />
+              הוסף
+            </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

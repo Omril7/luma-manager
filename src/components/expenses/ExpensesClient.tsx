@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import ExpenseSummaryCards from './ExpenseSummaryCards'
 import ExpensesTable from './ExpensesTable'
 import ExpensesCharts from './ExpensesCharts'
@@ -117,29 +119,49 @@ export default function ExpensesClient({ categories, expenses, allInstallments, 
       <ExpenseSummaryCards installments={monthInstallments} vatRate={vatRate} />
 
       {/* Filter Bar */}
-      <div className="flex items-center gap-4 flex-wrap">
-        {!isAnnual && (
-          <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2">
-            <button onClick={prevMonth} className="text-muted-foreground hover:text-foreground text-lg leading-none">→</button>
-            <span className="text-sm font-medium min-w-[120px] text-center">
-              {MONTH_NAMES[month - 1]} {year}
-            </span>
-            <button onClick={nextMonth} className="text-muted-foreground hover:text-foreground text-lg leading-none">←</button>
-          </div>
-        )}
-        <button
-          onClick={() => setIsAnnual(v => !v)}
-          className={`text-sm px-4 py-2 rounded-lg border transition-colors ${isAnnual ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-muted-foreground border-border hover:bg-muted'}`}
-        >
-          דוח שנתי
-        </button>
-        {isAnnual && (
-          <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2">
-            <button onClick={() => setYear(y => y - 1)} className="text-muted-foreground hover:text-foreground text-lg leading-none">→</button>
-            <span className="text-sm font-medium w-16 text-center">{year}</span>
-            <button onClick={() => setYear(y => y + 1)} className="text-muted-foreground hover:text-foreground text-lg leading-none">←</button>
-          </div>
-        )}
+      <div className="flex items-center gap-3 flex-wrap">
+        {/* Period toggle — segmented control */}
+        <div className="inline-flex items-center bg-muted border border-border rounded-lg p-0.5 gap-0.5">
+          <button
+            onClick={() => setIsAnnual(false)}
+            className={cn(
+              'px-3 py-1.5 rounded-md text-sm font-medium transition-all',
+              !isAnnual
+                ? 'bg-card shadow-[0_1px_3px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.6)] text-foreground'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >חודשי</button>
+          <button
+            onClick={() => setIsAnnual(true)}
+            className={cn(
+              'px-3 py-1.5 rounded-md text-sm font-medium transition-all',
+              isAnnual
+                ? 'bg-card shadow-[0_1px_3px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.6)] text-foreground'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >שנתי</button>
+        </div>
+
+        {/* Period navigator */}
+        <div className="flex items-center gap-0.5 bg-card border border-border rounded-lg p-0.5">
+          <button
+            onClick={isAnnual ? () => setYear(y => y - 1) : prevMonth}
+            className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+            aria-label="הקודם"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          <span className="text-sm font-medium px-3 min-w-[120px] text-center select-none tabular-nums">
+            {isAnnual ? year : `${MONTH_NAMES[month - 1]} ${year}`}
+          </span>
+          <button
+            onClick={isAnnual ? () => setYear(y => y + 1) : nextMonth}
+            className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+            aria-label="הבא"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {/* Charts */}

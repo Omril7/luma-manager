@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Textarea } from '@/components/ui/textarea'
+import { DatePicker } from '@/components/ui/date-picker'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 
 type Product = { id: string; name: string }
@@ -25,10 +26,10 @@ export default function IncomeModal({ products, income, onClose }: Props) {
   const [originalPrice, setOriginalPrice] = useState(income?.original_price ?? 0)
   const [discountAmount, setDiscountAmount] = useState(income?.discount_amount ?? 0)
   const [useProduct, setUseProduct] = useState(!!income?.product_id)
+  const [incomeDate, setIncomeDate] = useState(income?.income_date ?? new Date().toISOString().slice(0, 10))
   const formRef = useRef<HTMLFormElement>(null)
 
   const finalPrice = originalPrice - (hasDiscount ? discountAmount : 0)
-  const today = new Date().toISOString().slice(0, 10)
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -89,10 +90,19 @@ export default function IncomeModal({ products, income, onClose }: Props) {
             <Input name="order_id" defaultValue={income?.order_id ?? ''} />
           </div>
 
-          <div className="space-y-1.5">
-            <Label>מחיר מקורי (₪) *</Label>
-            <Input name="original_price" type="number" step="0.01" min="0" value={originalPrice}
-              onChange={e => setOriginalPrice(Number(e.target.value))} required />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>מחיר מקורי *</Label>
+              <div className="relative">
+                <Input name="original_price" type="number" step="0.01" min="0" value={originalPrice}
+                  onChange={e => setOriginalPrice(Number(e.target.value))} required className="pl-8" />
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">₪</span>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>תאריך *</Label>
+              <DatePicker name="income_date" value={incomeDate} onChange={setIncomeDate} />
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -102,9 +112,12 @@ export default function IncomeModal({ products, income, onClose }: Props) {
             </div>
             {hasDiscount && (
               <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">סכום הנחה (₪)</Label>
-                <Input name="discount_amount" type="number" step="0.01" min="0"
-                  value={discountAmount} onChange={e => setDiscountAmount(Number(e.target.value))} />
+                <Label className="text-xs text-muted-foreground">סכום הנחה</Label>
+                <div className="relative">
+                  <Input name="discount_amount" type="number" step="0.01" min="0"
+                    value={discountAmount} onChange={e => setDiscountAmount(Number(e.target.value))} className="pl-8" />
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">₪</span>
+                </div>
               </div>
             )}
           </div>
@@ -119,11 +132,6 @@ export default function IncomeModal({ products, income, onClose }: Props) {
           <div className="flex items-center gap-2">
             <Checkbox name="payment_on_delivery" value="true" defaultChecked={income?.payment_on_delivery} id="payment_on_delivery" />
             <Label htmlFor="payment_on_delivery" className="font-normal cursor-pointer">תשלום במסירה</Label>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>תאריך *</Label>
-            <Input name="income_date" type="date" defaultValue={income?.income_date ?? today} required />
           </div>
 
           <div className="space-y-1.5">

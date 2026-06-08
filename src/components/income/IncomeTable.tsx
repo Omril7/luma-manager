@@ -3,7 +3,7 @@
 import { useTransition } from 'react'
 import { deleteIncome } from '@/app/(dashboard)/income/actions'
 import { toast } from 'sonner'
-import DataTable, { type ColumnDef } from '@/components/ui/DataTable'
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table'
 import { Button } from '@/components/ui/button'
 
 type IncomeRow = {
@@ -44,47 +44,47 @@ export default function IncomeTable({ rows, filterMonth, onEdit }: Props) {
 
   const filtered = rows.filter(r => r.income_date.slice(0, 7) === filterMonth)
 
-  const columns: ColumnDef<IncomeRow>[] = [
+  const columns: DataTableColumn<IncomeRow>[] = [
     {
       key: 'income_date',
       header: 'תאריך',
       sortValue: r => r.income_date,
-      render: r => <span className="text-muted-foreground">{new Date(r.income_date).toLocaleDateString('he-IL')}</span>,
+      cell: r => <span className="text-muted-foreground">{new Date(r.income_date).toLocaleDateString('he-IL')}</span>,
     },
     {
       key: 'product_name',
       header: 'מוצר',
       sortValue: r => r.product_name,
-      render: r => <span className="font-medium">{r.product_name}</span>,
+      cell: r => <span className="font-medium">{r.product_name}</span>,
     },
     {
       key: 'order_id',
       header: 'מספר הזמנה',
-      render: r => <span className="text-muted-foreground text-xs">{r.order_id ?? '—'}</span>,
+      cell: r => <span className="text-muted-foreground text-xs">{r.order_id ?? '—'}</span>,
       defaultHidden: true,
     },
     {
       key: 'original_price',
       header: 'מחיר מקורי',
       sortValue: r => r.original_price,
-      render: r => fmt(r.original_price),
+      cell: r => fmt(r.original_price),
     },
     {
       key: 'discount_amount',
       header: 'הנחה',
       sortValue: r => r.discount_amount,
-      render: r => <span className="text-orange-600">{r.discount_amount > 0 ? fmt(r.discount_amount) : '—'}</span>,
+      cell: r => <span className="text-orange-600">{r.discount_amount > 0 ? fmt(r.discount_amount) : '—'}</span>,
     },
     {
       key: 'final_price',
       header: 'מחיר סופי',
       sortValue: r => r.final_price,
-      render: r => <span className="font-medium text-green-700">{fmt(r.final_price)}</span>,
+      cell: r => <span className="font-medium text-green-700">{fmt(r.final_price)}</span>,
     },
     {
       key: 'payment_on_delivery',
       header: 'מסירה',
-      render: r =>
+      cell: r =>
         r.payment_on_delivery
           ? <span className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-2 py-0.5 rounded-full">במסירה</span>
           : <span className="text-muted-foreground/50">—</span>,
@@ -93,7 +93,7 @@ export default function IncomeTable({ rows, filterMonth, onEdit }: Props) {
       key: 'source',
       header: 'מקור',
       sortValue: r => r.source,
-      render: r => (
+      cell: r => (
         <span className={`text-xs px-2 py-0.5 rounded-full ${r.source === 'store' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-muted text-muted-foreground'}`}>
           {r.source === 'store' ? 'חנות' : 'ידני'}
         </span>
@@ -102,7 +102,7 @@ export default function IncomeTable({ rows, filterMonth, onEdit }: Props) {
     {
       key: 'actions',
       header: 'פעולות',
-      render: r => (
+      cell: r => (
         <div className="flex gap-1">
           <Button variant="ghost" size="sm" onClick={() => onEdit(r)} className="h-7 px-2 text-xs text-muted-foreground hover:text-primary">ערוך</Button>
           <Button variant="ghost" size="sm" onClick={() => handleDelete(r.id)} disabled={isPending} className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive">מחק</Button>

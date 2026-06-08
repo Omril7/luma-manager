@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, Fragment } from 'react'
 import { savePricing, deletePricing, SavePricingInput } from '@/app/(dashboard)/pricing/actions'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Plus, Trash2, ChevronRight, ChevronLeft } from 'lucide-react'
+import { Plus, Trash2, ChevronRight, ChevronLeft, Check } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import {
   Dialog,
   DialogContent,
@@ -220,14 +221,34 @@ export default function PricingClient({ pricings, defaultHourlyRate }: Props) {
           </DialogHeader>
 
           {/* Step indicator */}
-          <div className="flex gap-1 mb-2">
+          <div className="flex items-start mb-5">
             {STEPS.map((s, i) => (
-              <div
-                key={s}
-                className={`flex-1 text-center text-xs py-1 rounded ${i === step ? 'bg-blue-600 text-white' : i < step ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-400'}`}
-              >
-                {i + 1}. {s}
-              </div>
+              <Fragment key={s}>
+                <div className="flex flex-col items-center gap-1.5 shrink-0">
+                  <div className={cn(
+                    'w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all duration-200',
+                    i < step  && 'bg-primary border-primary text-primary-foreground',
+                    i === step && 'bg-primary border-primary text-primary-foreground ring-4 ring-primary/20',
+                    i > step  && 'bg-background border-border text-muted-foreground',
+                  )}>
+                    {i < step ? <Check className="h-3.5 w-3.5" /> : i + 1}
+                  </div>
+                  <span className={cn(
+                    'text-[11px] text-center leading-tight max-w-[64px]',
+                    i < step  && 'text-primary',
+                    i === step && 'font-semibold text-foreground',
+                    i > step  && 'text-muted-foreground',
+                  )}>
+                    {s}
+                  </span>
+                </div>
+                {i < STEPS.length - 1 && (
+                  <div className={cn(
+                    'flex-1 h-px mt-4 mx-1 transition-colors duration-300',
+                    step > i ? 'bg-primary' : 'bg-border',
+                  )} />
+                )}
+              </Fragment>
             ))}
           </div>
 
@@ -335,14 +356,17 @@ function Step1({
               onChange={e => updatePart(i, 'name', e.target.value)}
               className="flex-1"
             />
-            <Input
-              type="number"
-              min={0}
-              placeholder="מחיר"
-              value={p.price || ''}
-              onChange={e => updatePart(i, 'price', parseFloat(e.target.value) || 0)}
-              className="w-28 text-left"
-            />
+            <div className="relative w-28">
+              <Input
+                type="number"
+                min={0}
+                placeholder="מחיר"
+                value={p.price || ''}
+                onChange={e => updatePart(i, 'price', parseFloat(e.target.value) || 0)}
+                className="pl-8"
+              />
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">₪</span>
+            </div>
             <Button variant="ghost" size="sm" onClick={() => removePart(i)} className="text-red-500">
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -377,12 +401,16 @@ function Step2({
         />
       </div>
       <div className="space-y-1">
-        <Label>ערך שעה (₪)</Label>
-        <Input
-          type="number" min={0}
-          value={hourlyRate || ''}
-          onChange={e => setHourlyRate(parseFloat(e.target.value) || 0)}
-        />
+        <Label>ערך שעה</Label>
+        <div className="relative">
+          <Input
+            type="number" min={0}
+            value={hourlyRate || ''}
+            onChange={e => setHourlyRate(parseFloat(e.target.value) || 0)}
+            className="pl-8"
+          />
+          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">₪</span>
+        </div>
       </div>
       <p className="text-sm font-medium text-gray-700">סה&quot;כ עבודה: <strong>{laborTotal.toLocaleString('he-IL')} ₪</strong></p>
     </div>
@@ -401,12 +429,16 @@ function Step3({
     <div className="space-y-4">
       <p className="text-sm text-gray-500">הוצאות נלוות לשעה: שחיקת ציוד, שכר דירה יחסי וכד׳.</p>
       <div className="space-y-1">
-        <Label>הוצאות נלוות לשעה (₪)</Label>
-        <Input
-          type="number" min={0}
-          value={overheadPerHour || ''}
-          onChange={e => setOverheadPerHour(parseFloat(e.target.value) || 0)}
-        />
+        <Label>הוצאות נלוות לשעה</Label>
+        <div className="relative">
+          <Input
+            type="number" min={0}
+            value={overheadPerHour || ''}
+            onChange={e => setOverheadPerHour(parseFloat(e.target.value) || 0)}
+            className="pl-8"
+          />
+          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">₪</span>
+        </div>
       </div>
       <p className="text-sm text-gray-500">× {timeHours} שעות</p>
       <p className="text-sm font-medium text-gray-700">סה&quot;כ הוצאות נלוות: <strong>{overheadTotal.toLocaleString('he-IL')} ₪</strong></p>
@@ -432,25 +464,36 @@ function Step4({
 }) {
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
-        <Button
-          variant={profitType === 'percent' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setProfitType('percent')}
-        >% מהעלות</Button>
-        <Button
-          variant={profitType === 'fixed' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setProfitType('fixed')}
-        >סכום קבוע (₪)</Button>
+      <div className="inline-flex rounded-lg border border-border bg-muted p-0.5 gap-0.5">
+        {([['percent', '% מהעלות'], ['fixed', 'סכום קבוע (₪)']] as const).map(([val, label]) => (
+          <button
+            key={val}
+            type="button"
+            onClick={() => setProfitType(val)}
+            className={cn(
+              'px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-150',
+              profitType === val
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            {label}
+          </button>
+        ))}
       </div>
       <div className="space-y-1">
-        <Label>{profitType === 'percent' ? 'אחוז רווח' : 'רווח (₪)'}</Label>
-        <Input
-          type="number" min={0}
-          value={profitValue || ''}
-          onChange={e => setProfitValue(parseFloat(e.target.value) || 0)}
-        />
+        <Label>{profitType === 'percent' ? 'אחוז רווח' : 'רווח'}</Label>
+        <div className="relative">
+          <Input
+            type="number" min={0}
+            value={profitValue || ''}
+            onChange={e => setProfitValue(parseFloat(e.target.value) || 0)}
+            className="pl-8"
+          />
+          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">
+            {profitType === 'percent' ? '%' : '₪'}
+          </span>
+        </div>
       </div>
 
       {/* Price breakdown card */}

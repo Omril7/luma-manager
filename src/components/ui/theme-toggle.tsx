@@ -21,7 +21,6 @@ export function ThemeToggle() {
   return (
     <Button variant="ghost" size="sm" onClick={toggle} className="w-full justify-start gap-2 px-3">
       {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-      <span className="text-sm">{isDark ? 'מצב יום' : 'מצב לילה'}</span>
     </Button>
   )
 }

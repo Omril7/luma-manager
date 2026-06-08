@@ -1,4 +1,4 @@
-import DataTable, { type ColumnDef } from '@/components/ui/DataTable'
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table'
 
 type IncomeRow = {
   product_name: string
@@ -21,30 +21,30 @@ function fmt(n: number) {
   return n.toLocaleString('he-IL', { style: 'currency', currency: 'ILS', maximumFractionDigits: 2 })
 }
 
-const columns: ColumnDef<ProductStat>[] = [
+const columns: DataTableColumn<ProductStat>[] = [
   {
     key: 'name',
     header: 'מוצר',
     sortValue: r => r.name,
-    render: r => <span className="font-medium">{r.name}</span>,
+    cell: r => <span className="font-medium">{r.name}</span>,
   },
   {
     key: 'units',
     header: 'יחידות',
     sortValue: r => r.units,
-    render: r => <span className="text-gray-600">{r.units}</span>,
+    cell: r => <span className="text-gray-600">{r.units}</span>,
   },
   {
     key: 'revenue',
     header: 'סה"כ הכנסה',
     sortValue: r => r.revenue,
-    render: r => <span className="text-green-700 font-medium">{fmt(r.revenue)}</span>,
+    cell: r => <span className="text-green-700 font-medium">{fmt(r.revenue)}</span>,
   },
   {
     key: 'discountLoss',
     header: 'אובדן הנחות',
     sortValue: r => r.discountLoss,
-    render: r => <span className="text-orange-600">{r.discountLoss > 0 ? fmt(r.discountLoss) : '—'}</span>,
+    cell: r => <span className="text-orange-600">{r.discountLoss > 0 ? fmt(r.discountLoss) : '—'}</span>,
   },
 ]
 

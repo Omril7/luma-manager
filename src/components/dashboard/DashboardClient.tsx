@@ -6,7 +6,11 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { MonthPicker, type MonthPickerValue } from '@/components/ui/month-picker'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { DataTable, type DataTableColumn, type DataTablePagination } from '@/components/ui/data-table'
 import { Trash2, Plus, CheckCircle } from 'lucide-react'
 import {
   Dialog,
@@ -88,6 +92,12 @@ export default function DashboardClient({
   const [isPending, startTransition] = useTransition()
   const [addError, setAddError] = useState('')
   const formRef = useRef<HTMLFormElement>(null)
+  const [paymentMonth, setPaymentMonth] = useState<MonthPickerValue>(() => {
+    const [yr2, mo2] = currentMonth.split('-')
+    return { year: Number(yr2), month: Number(mo2) }
+  })
+  const [balancePage, setBalancePage] = useState(0)
+  const BALANCE_PAGE_SIZE = 6
 
   const authorityTotal = authorityPayments.reduce((s, p) => s + p.amount, 0)
   const grossProfit = monthIncome - monthExpenses
@@ -138,91 +148,193 @@ export default function DashboardClient({
     })
   }
 
+  // Authority payments table columns
+  const authorityColumns: DataTableColumn<AuthorityPayment>[] = [
+    {
+      key: 'type',
+      header: 'סוג',
+      cell: row => TYPE_LABELS[row.type] ?? row.type,
+    },
+    {
+      key: 'amount',
+      header: 'סכום',
+      cell: row => ils(row.amount),
+    },
+    {
+      key: 'notes',
+      header: 'הערות',
+      className: 'text-muted-foreground',
+      cell: row => row.notes ?? '—',
+    },
+    {
+      key: 'actions',
+      header: '',
+      headerClassName: 'w-10',
+      cell: row => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleDeletePayment(row.id)}
+          disabled={isPending}
+          className="text-red-500 hover:text-red-700 h-7 w-7 p-0"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      ),
+    },
+  ]
+
+  // Authority payments totals footer row
+  const authorityFooter = (
+    <tr className="font-semibold bg-muted/50">
+      <td className="py-2.5">סה&quot;כ</td>
+      <td className="py-2.5">{ils(authorityTotal)}</td>
+      <td />
+      <td />
+    </tr>
+  )
+
+  // Balance table columns
+  const balanceColumns: DataTableColumn<MonthRow>[] = [
+    {
+      key: 'month',
+      header: 'חודש',
+      cell: row => (
+        <span className="flex items-center gap-1">
+          {monthLabel(row.month)}
+          {row.isLive && <span className="text-xs text-primary">(שוטף)</span>}
+        </span>
+      ),
+    },
+    {
+      key: 'opening',
+      header: 'יתרה פתיחה',
+      cell: row => ils(row.opening),
+    },
+    {
+      key: 'income',
+      header: 'הכנסות',
+      className: 'text-green-700',
+      cell: row => ils(row.income),
+    },
+    {
+      key: 'expenses',
+      header: 'הוצאות',
+      className: 'text-red-600',
+      cell: row => ils(row.expenses),
+    },
+    {
+      key: 'authority',
+      header: 'רשויות',
+      className: 'text-orange-600',
+      cell: row => ils(row.authority),
+    },
+    {
+      key: 'salary',
+      header: 'משכורת',
+      className: 'text-purple-600',
+      cell: row => ils(row.salary),
+    },
+    {
+      key: 'closing',
+      header: 'יתרה סגירה',
+      cell: row => (
+        <span className={`font-semibold ${row.closing >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+          {ils(row.closing)}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: '',
+      headerClassName: 'w-24',
+      cell: row => row.isLive ? (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setConfirmClose({ month: row.month, closing: row.closing, opening: row.opening })}
+          className="text-xs h-7 px-2"
+        >
+          <CheckCircle className="h-3 w-3 ml-1" />
+          סגור חודש
+        </Button>
+      ) : null,
+    },
+  ]
+
+  const balancePagination: DataTablePagination = {
+    page: balancePage,
+    pageSize: BALANCE_PAGE_SIZE,
+    total: balanceRows.length,
+    onPageChange: setBalancePage,
+  }
+
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-bold text-foreground">תזרים מזומנים</h1>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <Card label="הכנסות החודש" value={ils(monthIncome)} />
-        <Card label="הוצאות עסקיות" value={ils(monthExpenses)} />
-        <Card label="רווח גולמי" value={ils(grossProfit)} highlight={grossProfit >= 0 ? 'green' : 'red'} />
-        <Card label="משכורת לעצמי" value={ils(salary)} />
-        <Card label="יתרה לעסק" value={ils(monthlyBalance)} highlight={monthlyBalance >= 0 ? 'green' : 'red'} />
+        <SummaryCard label="הכנסות החודש" value={ils(monthIncome)} />
+        <SummaryCard label="הוצאות עסקיות" value={ils(monthExpenses)} />
+        <SummaryCard label="רווח גולמי" value={ils(grossProfit)} highlight={grossProfit >= 0 ? 'green' : 'red'} />
+        <SummaryCard label="משכורת לעצמי" value={ils(salary)} />
+        <SummaryCard label="יתרה לעסק" value={ils(monthlyBalance)} highlight={monthlyBalance >= 0 ? 'green' : 'red'} />
       </div>
 
       {/* Salary Control */}
-      <section className="bg-card rounded-lg border border-border p-5 space-y-3">
-        <h2 className="font-semibold text-foreground">שכר עצמי</h2>
-        <div className="flex items-center gap-4">
-          <Label className="text-sm text-muted-foreground whitespace-nowrap">אחוז מהרווח:</Label>
-          <Input
-            type="number"
-            min={0}
-            max={100}
-            value={paycheckPercent}
-            onChange={e => setPaycheckPercent(Number(e.target.value))}
-            onBlur={handlePaycheckBlur}
-            className="w-24 text-center"
-          />
-          <span className="text-muted-foreground text-sm">%</span>
-          <span className="text-foreground font-medium">
-            משכורת חודשית: <strong>{ils(salary)}</strong>
-          </span>
-        </div>
-      </section>
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-semibold">שכר עצמי</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4 flex-wrap">
+            <Label className="text-sm text-muted-foreground whitespace-nowrap">אחוז מהרווח:</Label>
+            <div className="relative w-20">
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                inputSize="sm"
+                value={paycheckPercent}
+                onChange={e => setPaycheckPercent(Number(e.target.value))}
+                onBlur={handlePaycheckBlur}
+                className="w-full pr-6 text-center"
+              />
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground/70 pointer-events-none select-none">%</span>
+            </div>
+            <span className="text-foreground font-medium">
+              משכורת חודשית: <strong>{ils(salary)}</strong>
+            </span>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Authority Payments */}
-      <section className="bg-card rounded-lg border border-border p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-foreground">תשלומים לרשויות — {currentMonthLabel}</h2>
-          <Button size="sm" onClick={() => setShowAddPayment(true)}>
-            <Plus className="h-4 w-4 ml-1" />
-            הוסף תשלום
-          </Button>
-        </div>
-
-        {authorityPayments.length === 0 ? (
-          <p className="text-muted-foreground text-sm">אין תשלומים לרשויות החודש</p>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-right border-b border-border text-muted-foreground">
-                <th className="pb-2 font-medium">סוג</th>
-                <th className="pb-2 font-medium">סכום</th>
-                <th className="pb-2 font-medium">הערות</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {authorityPayments.map(p => (
-                <tr key={p.id} className="border-b last:border-0">
-                  <td className="py-2">{TYPE_LABELS[p.type] ?? p.type}</td>
-                  <td className="py-2">{ils(p.amount)}</td>
-                  <td className="py-2 text-muted-foreground">{p.notes ?? '—'}</td>
-                  <td className="py-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeletePayment(p.id)}
-                      disabled={isPending}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-              <tr className="font-semibold bg-muted/50">
-                <td className="py-2">סה&quot;כ</td>
-                <td className="py-2">{ils(authorityTotal)}</td>
-                <td />
-                <td />
-              </tr>
-            </tbody>
-          </table>
-        )}
-      </section>
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-semibold">תשלומים לרשויות — {currentMonthLabel}</CardTitle>
+            <Button size="sm" onClick={() => setShowAddPayment(true)}>
+              <Plus className="h-4 w-4 ml-1" />
+              הוסף תשלום
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {authorityPayments.length === 0 ? (
+            <p className="text-muted-foreground text-sm">אין תשלומים לרשויות החודש</p>
+          ) : (
+            <DataTable
+              columns={authorityColumns}
+              data={authorityPayments}
+              rowKey={row => row.id}
+              footerRow={authorityFooter}
+              emptyMessage="אין תשלומים לרשויות החודש"
+            />
+          )}
+        </CardContent>
+      </Card>
 
       {/* Add Authority Payment Modal */}
       <Dialog open={showAddPayment} onOpenChange={setShowAddPayment}>
@@ -231,30 +343,35 @@ export default function DashboardClient({
             <DialogTitle>הוסף תשלום לרשויות</DialogTitle>
           </DialogHeader>
           <form ref={formRef} onSubmit={handleAddPayment} className="space-y-4">
-            <div className="space-y-1">
-              <Label>סוג</Label>
-              <Select name="type" defaultValue="income_tax">
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="income_tax">מס הכנסה</SelectItem>
-                  <SelectItem value="social_security">ביטוח לאומי</SelectItem>
-                  <SelectItem value="vat">מע&quot;מ</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label>סכום (₪)</Label>
-              <Input name="amount" type="number" min={0} step="0.01" required placeholder="0.00" />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>סוג</Label>
+                <Select name="type" defaultValue="income_tax">
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="income_tax">מס הכנסה</SelectItem>
+                    <SelectItem value="social_security">ביטוח לאומי</SelectItem>
+                    <SelectItem value="vat">מע&quot;מ</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>סכום</Label>
+                <div className="relative">
+                  <Input name="amount" type="number" min={0} step="0.01" required placeholder="0.00" className="pl-8" />
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">₪</span>
+                </div>
+              </div>
             </div>
             <div className="space-y-1">
               <Label>חודש</Label>
-              <Input name="payment_month" type="month" defaultValue={currentMonth} required />
+              <MonthPicker name="payment_month" value={paymentMonth} onChange={setPaymentMonth} />
             </div>
             <div className="space-y-1">
               <Label>הערות (אופציונלי)</Label>
-              <Input name="notes" type="text" />
+              <Textarea name="notes" rows={2} placeholder="הערה..." />
             </div>
             {addError && <p className="text-red-500 text-sm">{addError}</p>}
             <DialogFooter>
@@ -266,59 +383,21 @@ export default function DashboardClient({
       </Dialog>
 
       {/* Running Balance Table */}
-      <section className="bg-card rounded-lg border border-border p-5 space-y-4">
-        <h2 className="font-semibold text-foreground">עובר ושב</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-right border-b border-border text-muted-foreground">
-                <th className="pb-2 font-medium">חודש</th>
-                <th className="pb-2 font-medium">יתרה פתיחה</th>
-                <th className="pb-2 font-medium">הכנסות</th>
-                <th className="pb-2 font-medium">הוצאות</th>
-                <th className="pb-2 font-medium">רשויות</th>
-                <th className="pb-2 font-medium">משכורת</th>
-                <th className="pb-2 font-medium">יתרה סגירה</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {balanceRows.map(row => (
-                <tr
-                  key={row.month}
-                  className={`border-b border-border last:border-0 ${row.isLive ? 'bg-primary/5 font-medium' : ''}`}
-                >
-                  <td className="py-2">
-                    {monthLabel(row.month)}
-                    {row.isLive && <span className="mr-1 text-xs text-primary">(שוטף)</span>}
-                  </td>
-                  <td className="py-2">{ils(row.opening)}</td>
-                  <td className="py-2 text-green-700">{ils(row.income)}</td>
-                  <td className="py-2 text-red-600">{ils(row.expenses)}</td>
-                  <td className="py-2 text-orange-600">{ils(row.authority)}</td>
-                  <td className="py-2 text-purple-600">{ils(row.salary)}</td>
-                  <td className={`py-2 font-semibold ${row.closing >= 0 ? 'text-green-700' : 'text-red-600'}`}>
-                    {ils(row.closing)}
-                  </td>
-                  <td className="py-2">
-                    {row.isLive && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setConfirmClose({ month: row.month, closing: row.closing, opening: row.opening })}
-                        className="text-xs"
-                      >
-                        <CheckCircle className="h-3 w-3 ml-1" />
-                        סגור חודש
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-semibold">עובר ושב</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DataTable
+            columns={balanceColumns}
+            data={balanceRows}
+            rowKey={row => row.month}
+            rowClassName={row => row.isLive ? 'bg-primary/5 font-medium' : ''}
+            pagination={balancePagination}
+            emptyMessage="אין נתוני יתרה להצגה"
+          />
+        </CardContent>
+      </Card>
 
       {/* Confirm Month Close Dialog */}
       <Dialog open={!!confirmClose} onOpenChange={() => setConfirmClose(null)}>
@@ -347,13 +426,15 @@ export default function DashboardClient({
   )
 }
 
-function Card({ label, value, highlight }: { label: string; value: string; highlight?: 'green' | 'red' }) {
+function SummaryCard({ label, value, highlight }: { label: string; value: string; highlight?: 'green' | 'red' }) {
   return (
-    <div className="bg-card rounded-lg border border-border p-4 space-y-1">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className={`text-xl font-bold ${highlight === 'green' ? 'text-green-700 dark:text-green-400' : highlight === 'red' ? 'text-red-600 dark:text-red-400' : 'text-foreground'}`}>
-        {value}
-      </p>
-    </div>
+    <Card>
+      <CardContent className="p-4 space-y-1">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className={`text-xl font-bold ${highlight === 'green' ? 'text-green-700 dark:text-green-400' : highlight === 'red' ? 'text-red-600 dark:text-red-400' : 'text-foreground'}`}>
+          {value}
+        </p>
+      </CardContent>
+    </Card>
   )
 }

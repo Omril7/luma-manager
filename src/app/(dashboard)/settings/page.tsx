@@ -15,9 +15,9 @@ export default async function SettingsPage() {
     .single()
 
   return (
-    <div className="max-w-2xl">
+    <div className="w-full">
       <h1 className="text-2xl font-bold text-foreground mb-6">הגדרות</h1>
-      <div className="space-y-6">
+      <div className="grid grid-cols-2 gap-6">
         <GeneralSettingsForm settings={settings as Settings | null} />
         <BalanceSettingsForm settings={settings as Settings | null} />
         <EmailSettingsForm settings={settings as Settings | null} />

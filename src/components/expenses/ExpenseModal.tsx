@@ -8,13 +8,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
+import { DatePicker } from '@/components/ui/date-picker'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { UploadCloud, FileText, X, ExternalLink } from 'lucide-react'
 
 type Category = {
   id: string
@@ -52,9 +49,25 @@ export default function ExpenseModal({ categories, expense, onClose, onCategoryM
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState('')
   const [hasInstallments, setHasInstallments] = useState(expense ? expense.installments_total > 1 : false)
+  const [transactionDate, setTransactionDate] = useState(expense?.transaction_date ?? new Date().toISOString().slice(0, 10))
+  const [categoryId, setCategoryId] = useState<string>(expense?.category_id ?? 'none')
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
 
-  const today = new Date().toISOString().slice(0, 10)
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setSelectedFiles(Array.from(e.target.files ?? []))
+  }
+
+  function removeFile(index: number) {
+    const newFiles = selectedFiles.filter((_, i) => i !== index)
+    setSelectedFiles(newFiles)
+    if (fileInputRef.current) {
+      const dt = new DataTransfer()
+      newFiles.forEach(f => dt.items.add(f))
+      fileInputRef.current.files = dt.files
+    }
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -94,34 +107,43 @@ export default function ExpenseModal({ categories, expense, onClose, onCategoryM
           <div className="space-y-1.5">
             <Label>קטגוריה</Label>
             <div className="flex gap-2">
-              <select
-                name="category_id"
-                defaultValue={expense?.category_id ?? ''}
-                className="flex-1 h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-              >
-                <option value="">ללא קטגוריה</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={onCategoryModalOpen}
-                className="text-sm text-primary hover:underline whitespace-nowrap"
-              >
-                + נהל קטגוריות
-              </button>
+              <input type="hidden" name="category_id" value={categoryId === 'none' ? '' : categoryId} />
+              <Select value={categoryId} onValueChange={setCategoryId}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="ללא קטגוריה" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">ללא קטגוריה</SelectItem>
+                  {categories.map(cat => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      <span className="flex items-center gap-2">
+                        {cat.name}
+                        {cat.is_vat_recognized && (
+                          <span className="text-[10px] bg-green-500/15 text-green-700 dark:text-green-400 border border-green-500/30 rounded px-1 py-0.5">מוכר מע&quot;מ</span>
+                        )}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button type="button" variant="outline" size="sm" onClick={onCategoryModalOpen} className="shrink-0">
+                נהל
+              </Button>
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label>סכום כולל מע&quot;מ (₪) *</Label>
-            <Input name="total_amount" type="number" step="0.01" min="0" defaultValue={expense?.total_amount} required />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>תאריך עסקה *</Label>
-            <Input name="transaction_date" type="date" defaultValue={expense?.transaction_date ?? today} required />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>סכום כולל מע&quot;מ *</Label>
+              <div className="relative">
+                <Input name="total_amount" type="number" step="0.01" min="0" defaultValue={expense?.total_amount} required className="pl-8" />
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">₪</span>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>תאריך עסקה *</Label>
+              <DatePicker name="transaction_date" value={transactionDate} onChange={setTransactionDate} />
+            </div>
           </div>
 
           <div className="space-y-3 border border-border rounded-lg p-3">
@@ -159,19 +181,52 @@ export default function ExpenseModal({ categories, expense, onClose, onCategoryM
             </div>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <Label>קבלות</Label>
+
             {expense?.receipts && expense.receipts.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-2">
+              <div className="flex flex-wrap gap-1.5">
                 {expense.receipts.map(r => (
                   <a key={r.id} href={r.cloudinary_url} target="_blank" rel="noreferrer"
-                    className="text-xs text-primary hover:underline border border-border rounded px-2 py-1">
-                    {r.file_type === 'pdf' ? '📄 PDF' : '🖼 תמונה'}
+                    className="inline-flex items-center gap-1.5 text-xs text-primary bg-primary/5 hover:bg-primary/10 border border-primary/20 rounded-lg px-2.5 py-1.5 transition-colors">
+                    <FileText className="h-3 w-3" />
+                    {r.file_type === 'pdf' ? 'PDF' : 'תמונה'}
+                    <ExternalLink className="h-2.5 w-2.5 opacity-50" />
                   </a>
                 ))}
               </div>
             )}
-            <Input name="receipts" type="file" accept="image/*,application/pdf" multiple />
+
+            <label htmlFor="receipts-input"
+              className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all">
+              <UploadCloud className="h-7 w-7 text-muted-foreground mb-1" />
+              <span className="text-sm font-medium text-muted-foreground">לחץ להוספת קבלות</span>
+              <span className="text-xs text-muted-foreground/60">תמונות (JPG/PNG) או PDF</span>
+            </label>
+            <input
+              ref={fileInputRef}
+              id="receipts-input"
+              name="receipts"
+              type="file"
+              accept="image/*,application/pdf"
+              multiple
+              className="sr-only"
+              onChange={handleFileChange}
+            />
+
+            {selectedFiles.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {selectedFiles.map((file, i) => (
+                  <div key={i} className="flex items-center gap-1.5 bg-muted border border-border rounded-lg px-2.5 py-1 text-xs text-foreground max-w-[180px]">
+                    <FileText className="h-3 w-3 shrink-0 text-muted-foreground" />
+                    <span className="truncate">{file.name}</span>
+                    <button type="button" onClick={() => removeFile(i)} className="shrink-0 text-muted-foreground hover:text-destructive transition-colors">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="space-y-1.5">

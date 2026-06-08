@@ -3,7 +3,7 @@
 import { useTransition } from 'react'
 import { deleteExpense } from '@/app/(dashboard)/expenses/actions'
 import { toast } from 'sonner'
-import DataTable, { type ColumnDef } from '@/components/ui/DataTable'
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table'
 import { Button } from '@/components/ui/button'
 
 type Receipt = {
@@ -77,18 +77,18 @@ export default function ExpensesTable({ expenses, filterMonth, onEdit }: Props) 
     })
     .filter((r): r is Row => r !== null)
 
-  const columns: ColumnDef<Row>[] = [
+  const columns: DataTableColumn<Row>[] = [
     {
       key: 'transaction_date',
       header: 'תאריך',
       sortValue: r => r.transaction_date,
-      render: r => <span className="text-muted-foreground">{new Date(r.transaction_date).toLocaleDateString('he-IL')}</span>,
+      cell: r => <span className="text-muted-foreground">{new Date(r.transaction_date).toLocaleDateString('he-IL')}</span>,
     },
     {
       key: 'description',
       header: 'תיאור',
       sortValue: r => r.description,
-      render: r => (
+      cell: r => (
         <span className="font-medium">
           {r.description}
           {r.is_recurring && (
@@ -101,24 +101,24 @@ export default function ExpensesTable({ expenses, filterMonth, onEdit }: Props) 
       key: 'category',
       header: 'קטגוריה',
       sortValue: r => r.expense_categories?.name ?? '',
-      render: r => <span className="text-muted-foreground">{r.expense_categories?.name ?? '—'}</span>,
+      cell: r => <span className="text-muted-foreground">{r.expense_categories?.name ?? '—'}</span>,
     },
     {
       key: '_installmentAmt',
       header: 'סכום',
       sortValue: r => r._installmentAmt,
-      render: r => <span className="font-medium">{fmt(r._installmentAmt)}</span>,
+      cell: r => <span className="font-medium">{fmt(r._installmentAmt)}</span>,
     },
     {
       key: '_vatAmt',
       header: 'מע"מ',
       sortValue: r => r._vatAmt,
-      render: r => <span className="text-muted-foreground">{r._vatAmt > 0 ? fmt(r._vatAmt) : '—'}</span>,
+      cell: r => <span className="text-muted-foreground">{r._vatAmt > 0 ? fmt(r._vatAmt) : '—'}</span>,
     },
     {
       key: 'installments',
       header: 'תשלומים',
-      render: r =>
+      cell: r =>
         r.installments_total > 1
           ? <span className="text-muted-foreground whitespace-nowrap">{r._installmentNum} מתוך {r.installments_total}</span>
           : <span className="text-muted-foreground/50">—</span>,
@@ -127,7 +127,7 @@ export default function ExpensesTable({ expenses, filterMonth, onEdit }: Props) 
       key: 'is_personal',
       header: 'סוג',
       sortValue: r => r.is_personal ? 1 : 0,
-      render: r => (
+      cell: r => (
         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${r.is_personal ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
           {r.is_personal ? 'אישי' : 'עסקי'}
         </span>
@@ -136,7 +136,7 @@ export default function ExpensesTable({ expenses, filterMonth, onEdit }: Props) 
     {
       key: 'receipts',
       header: 'קבלה',
-      render: r =>
+      cell: r =>
         r.receipts.length > 0 ? (
           <div className="flex gap-1">
             {r.receipts.map(rec => (
@@ -150,7 +150,7 @@ export default function ExpensesTable({ expenses, filterMonth, onEdit }: Props) 
     {
       key: 'actions',
       header: 'פעולות',
-      render: r => (
+      cell: r => (
         <div className="flex gap-1">
           <Button variant="ghost" size="sm" onClick={() => onEdit(r)} className="h-7 px-2 text-xs text-muted-foreground hover:text-primary">ערוך</Button>
           <Button variant="ghost" size="sm" onClick={() => handleDelete(r.id)} disabled={isPending} className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive">מחק</Button>

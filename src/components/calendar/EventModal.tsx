@@ -8,7 +8,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Textarea } from '@/components/ui/textarea'
+import { DatePicker } from '@/components/ui/date-picker'
+import { DateTimePicker } from '@/components/ui/date-time-picker'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 type CalendarEvent = {
   id: string; title: string; description: string | null
@@ -32,9 +35,16 @@ export default function EventModal({ event, defaultStart, onClose }: Props) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState('')
   const [isAllDay, setIsAllDay] = useState(event?.is_all_day ?? false)
+  const [allDayDate, setAllDayDate] = useState(
+    event?.is_all_day ? toDateLocal(event?.start_time) : (defaultStart ? toDateLocal(defaultStart) : toDateLocal(new Date().toISOString()))
+  )
+  const [startDatetime, setStartDatetime] = useState(
+    defaultStart ? toDatetimeLocal(defaultStart) : (toDatetimeLocal(event?.start_time) || '')
+  )
+  const [endDatetime, setEndDatetime] = useState(toDatetimeLocal(event?.end_time) || '')
   const [recurrence, setRecurrence] = useState(() => {
     const r = event?.recurrence_rule ?? ''
-    if (!r) return ''
+    if (!r) return 'none'
     return RECURRENCE_OPTIONS.find(o => o.value === r && o.value !== '' && o.value !== 'custom') ? r : 'custom'
   })
   const [customRrule, setCustomRrule] = useState(() => {
@@ -43,13 +53,11 @@ export default function EventModal({ event, defaultStart, onClose }: Props) {
   })
   const formRef = useRef<HTMLFormElement>(null)
 
-  const defaultStartVal = defaultStart ? toDatetimeLocal(defaultStart) : toDatetimeLocal(event?.start_time)
-
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const formData = new FormData(formRef.current!)
     formData.set('is_all_day', isAllDay ? 'true' : 'false')
-    formData.set('recurrence_rule', recurrence === 'custom' ? customRrule.trim() : recurrence)
+    formData.set('recurrence_rule', recurrence === 'custom' ? customRrule.trim() : recurrence === 'none' ? '' : recurrence)
     startTransition(async () => {
       const result = await (event ? updateEvent : createEvent)(null, formData)
       if (result.error) { setError(result.error); toast.error(result.error) }
@@ -84,30 +92,34 @@ export default function EventModal({ event, defaultStart, onClose }: Props) {
 
           <div className="space-y-1.5">
             <Label>תאריך ושעת התחלה *</Label>
-            <Input
-              name="start_time"
-              type={isAllDay ? 'date' : 'datetime-local'}
-              defaultValue={isAllDay ? (defaultStartVal.slice(0, 10) || toDateLocal(event?.start_time)) : defaultStartVal}
-              required
-            />
+            {isAllDay ? (
+              <DatePicker name="start_time" value={allDayDate} onChange={setAllDayDate} />
+            ) : (
+              <DateTimePicker name="start_time" value={startDatetime} onChange={setStartDatetime} />
+            )}
           </div>
 
           {!isAllDay && (
             <div className="space-y-1.5">
               <Label>תאריך ושעת סיום</Label>
-              <Input name="end_time" type="datetime-local" defaultValue={toDatetimeLocal(event?.end_time)} />
+              <DateTimePicker name="end_time" value={endDatetime} onChange={setEndDatetime} />
             </div>
           )}
 
           <div className="space-y-1.5">
             <Label>חזרה</Label>
-            <select
-              value={recurrence}
-              onChange={e => setRecurrence(e.target.value)}
-              className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-            >
-              {RECURRENCE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
+            <Select value={recurrence} onValueChange={setRecurrence}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {RECURRENCE_OPTIONS.map(o => (
+                  <SelectItem key={o.value} value={o.value === '' ? 'none' : o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {recurrence === 'custom' && (
               <Input
                 type="text"
