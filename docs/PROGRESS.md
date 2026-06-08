@@ -1,3 +1,8 @@
+## [2026-06-08] Schema changes — email settings + delivery amount
+- `settings`: removed `gmail_user` and `gmail_app_password`; added `accountant_email` (the recipient address for summary emails; SMTP credentials stay in env vars only)
+- `income`: replaced `payment_on_delivery boolean` with `delivery_amount numeric(12,2) DEFAULT 0`; zero = no delivery fee, any positive value = delivery portion of final_price
+- Migration: `supabase/migrations/20260608000000_email_and_delivery.sql`
+
 ## [2026-06-07] Phase 9 — Polish
 - Skeleton loaders: Skeleton/CardSkeleton/TableSkeleton/PageSkeleton components; loading.tsx for all 6 dashboard routes
 - Error boundaries: error.tsx for all 6 dashboard routes with Hebrew "אירעה שגיאה" message + retry button
@@ -32,7 +37,7 @@
 
 ## [2026-06-07] Phase 5 — Income
 - Product management modal: CRUD (create, delete), used in income modal combobox
-- Add/edit income form: product name (free text or select from products), order ID, original price, optional discount, read-only final price, payment on delivery flag, date, notes
+- Add/edit income form: product name (free text or select from products), order ID, original price, optional discount, read-only final price, delivery amount field, date, notes
 - Income page: 4 summary cards (total, count, total discounts, net), monthly daily bar chart, annual monthly bar chart, product breakdown table, income table with month filter
 - POST /api/webhooks/store: fully implemented with x-webhook-secret validation, Zod schema, auto product creation by external_id, source='store'
 - Webhook requires user_id in payload — noted in DECISIONS.md as the spec doesn't define user resolution
@@ -42,7 +47,7 @@
 - POST /api/send-summary: loads installments for the requested month, builds Hebrew HTML email with two sections (VAT-recognized business expenses + personal expenses), downloads receipt files from Cloudinary and attaches them
 - SendSummaryModal: month/year picker, preview of what will be sent, warning when Gmail not configured, success state with stats (expense counts, attachment count)
 - "שלח סיכום חודשי" button added to expenses page header
-- Email sent to the gmail_user address configured in settings
+- Email sent to the accountant_email address configured in settings (updated post-Phase 4; see 2026-06-08 entry)
 - hasGmailConfig flag passed from server page to client to show warning inline
 
 ## [2026-06-07] Phase 3 — Expenses

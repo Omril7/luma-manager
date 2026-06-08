@@ -256,8 +256,7 @@ CREATE TABLE settings (
   paycheck_percent  numeric(5,2)  DEFAULT 30.00,
   opening_balance   numeric(12,2) DEFAULT 0,
   business_name     text,
-  gmail_user        text,
-  gmail_app_password text,
+  accountant_email  text,          -- recipient for summary emails (SMTP creds live in env vars only)
   created_at        timestamptz   DEFAULT now()
 );
 ```
@@ -338,7 +337,7 @@ CREATE TABLE income (
   original_price        numeric(12,2) NOT NULL,
   discount_amount       numeric(12,2) DEFAULT 0,
   final_price           numeric(12,2) NOT NULL,  -- original_price - discount_amount
-  payment_on_delivery   boolean DEFAULT false,
+  delivery_amount       numeric(12,2) DEFAULT 0, -- portion of final_price collected on delivery (0 = none)
   income_date           date    NOT NULL,
   notes                 text,
   created_at            timestamptz DEFAULT now()
@@ -600,7 +599,7 @@ Fields:
   "original_price": 0,
   "discount_amount": 0,
   "final_price": 0,
-  "payment_on_delivery": false,
+  "delivery_amount": 0,
   "income_date": "YYYY-MM-DD"
 }
 ```
@@ -729,7 +728,7 @@ Displayed in a large card with breakdown.
 Sections:
 1. **כללי**: business name, VAT rate (%), paycheck % of profit
 2. **עובר ושב**: opening balance (used as starting value for running balance)
-3. **מייל**: Gmail address, Gmail App Password (stored in settings table)
+3. **מייל**: כתובת אימייל של רואה החשבון — הסיכומים נשלחים לכתובת זו (SMTP credentials נשמרים ב-env vars בלבד, לא ב-DB)
 4. **חשבון**: email, change password button
 
 All saved via Server Action to the settings table.
