@@ -14,7 +14,7 @@ type IncomeRow = {
   original_price: number
   discount_amount: number
   final_price: number
-  payment_on_delivery: boolean
+  delivery_amount: number
   income_date: string
   notes: string | null
   source: string
@@ -82,12 +82,12 @@ export default function IncomeTable({ rows, filterMonth, onEdit }: Props) {
       cell: r => <span className="font-medium text-green-700">{fmt(r.final_price)}</span>,
     },
     {
-      key: 'payment_on_delivery',
-      header: 'מסירה',
-      cell: r =>
-        r.payment_on_delivery
-          ? <span className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-2 py-0.5 rounded-full">במסירה</span>
-          : <span className="text-muted-foreground/50">—</span>,
+      key: 'delivery_amount',
+      header: 'משלוח',
+      sortValue: r => r.delivery_amount,
+      cell: r => r.delivery_amount > 0
+        ? <span className="text-blue-600 dark:text-blue-400">{fmt(r.delivery_amount)}</span>
+        : <span className="text-muted-foreground/50">—</span>,
     },
     {
       key: 'source',

@@ -24,7 +24,7 @@ type IncomeRow = {
   original_price: number
   discount_amount: number
   final_price: number
-  payment_on_delivery: boolean
+  delivery_amount: number
   income_date: string
   notes: string | null
   source: string

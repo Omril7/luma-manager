@@ -24,7 +24,7 @@ export default async function ExpensesPage() {
       .order('name'),
     supabase
       .from('settings')
-      .select('vat_rate, gmail_user, gmail_app_password')
+      .select('vat_rate, accountant_email')
       .eq('user_id', user.id)
       .single(),
     supabase
@@ -53,7 +53,7 @@ export default async function ExpensesPage() {
       expenses={(expenses ?? []) as unknown as Parameters<typeof ExpensesClient>[0]['expenses']}
       allInstallments={(allInstallments ?? []) as unknown as Parameters<typeof ExpensesClient>[0]['allInstallments']}
       vatRate={settings?.vat_rate ?? 18}
-      hasGmailConfig={!!(settings?.gmail_user && settings?.gmail_app_password)}
+      hasAccountantEmail={!!settings?.accountant_email}
     />
   )
 }

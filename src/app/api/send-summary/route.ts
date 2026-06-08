@@ -45,14 +45,18 @@ export async function POST(req: NextRequest) {
   const { year, month } = body
   if (!year || !month) return NextResponse.json({ error: 'חסרים שדות year ו-month' }, { status: 400 })
 
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+    return NextResponse.json({ error: 'הגדרות SMTP חסרות בשרת — פנה למנהל המערכת' }, { status: 500 })
+  }
+
   const { data: settings } = await supabase
     .from('settings')
-    .select('gmail_user, gmail_app_password, business_name, vat_rate')
+    .select('accountant_email, business_name, vat_rate')
     .eq('user_id', user.id)
     .single()
 
-  if (!settings?.gmail_user || !settings?.gmail_app_password) {
-    return NextResponse.json({ error: 'הגדרות Gmail חסרות — אנא הגדר בעמוד ההגדרות' }, { status: 400 })
+  if (!settings?.accountant_email) {
+    return NextResponse.json({ error: 'לא הוגדרה כתובת מייל של רואה החשבון — אנא הגדר בעמוד ההגדרות' }, { status: 400 })
   }
 
   const monthKey = `${year}-${String(month).padStart(2, '0')}`
@@ -171,12 +175,10 @@ export async function POST(req: NextRequest) {
 
   try {
     await sendSummaryEmail({
-      to: settings.gmail_user,
+      to: settings.accountant_email,
       subject: `סיכום הוצאות ${label}${businessName ? ` — ${businessName}` : ''}`,
       html,
       attachments,
-      gmailUser: settings.gmail_user,
-      gmailAppPassword: settings.gmail_app_password,
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'שגיאה בשליחת המייל'

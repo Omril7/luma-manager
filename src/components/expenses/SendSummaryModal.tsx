@@ -6,9 +6,9 @@ import { Label } from '@/components/ui/label'
 import { MonthPicker, type MonthPickerValue } from '@/components/ui/month-picker'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 
-type Props = { onClose: () => void; hasGmailConfig: boolean }
+type Props = { onClose: () => void; hasAccountantEmail: boolean }
 
-export default function SendSummaryModal({ onClose, hasGmailConfig }: Props) {
+export default function SendSummaryModal({ onClose, hasAccountantEmail }: Props) {
   const now = new Date()
   const [monthValue, setMonthValue] = useState<MonthPickerValue>({
     month: now.getMonth() + 1,
@@ -56,9 +56,9 @@ export default function SendSummaryModal({ onClose, hasGmailConfig }: Props) {
           </div>
         ) : (
           <div className="space-y-4">
-            {!hasGmailConfig && (
+            {!hasAccountantEmail && (
               <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
-                לא הוגדר חשבון Gmail — אנא הגדר בעמוד ההגדרות לפני שליחה.
+                לא הוגדרה כתובת מייל של רואה החשבון — אנא הגדר בעמוד ההגדרות.
               </div>
             )}
 
@@ -72,14 +72,14 @@ export default function SendSummaryModal({ onClose, hasGmailConfig }: Props) {
               <p>• הוצאות עסקיות מקטגוריות מוכרות מע&quot;מ</p>
               <p>• הוצאות אישיות (לידיעה בלבד)</p>
               <p>• קבלות מצורפות כקבצים</p>
-              <p>• הדוח יישלח אל כתובת ה-Gmail שהוגדרה בהגדרות</p>
+              <p>• הדוח יישלח אל רואה החשבון שהוגדר בהגדרות</p>
             </div>
 
             {error && <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2">{error}</p>}
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>ביטול</Button>
-              <Button onClick={handleSend} disabled={status === 'sending' || !hasGmailConfig}>
+              <Button onClick={handleSend} disabled={status === 'sending' || !hasAccountantEmail}>
                 {status === 'sending' ? 'שולח...' : 'שלח'}
               </Button>
             </DialogFooter>

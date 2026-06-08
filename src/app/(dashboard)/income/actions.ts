@@ -74,7 +74,7 @@ const incomeSchema = z.object({
   original_price: z.coerce.number().nonnegative('מחיר מקורי חייב להיות אפס או יותר'),
   has_discount: z.boolean().default(false),
   discount_amount: z.coerce.number().nonnegative().default(0),
-  payment_on_delivery: z.boolean().default(false),
+  delivery_amount: z.coerce.number().nonnegative().default(0),
   income_date: z.string().min(1, 'תאריך נדרש'),
   notes: z.string().optional(),
 })
@@ -92,7 +92,7 @@ export async function createIncome(_prev: unknown, formData: FormData) {
     original_price: formData.get('original_price'),
     has_discount: hasDiscount,
     discount_amount: hasDiscount ? formData.get('discount_amount') : 0,
-    payment_on_delivery: formData.get('payment_on_delivery') === 'true',
+    delivery_amount: formData.get('delivery_amount') || 0,
     income_date: formData.get('income_date'),
     notes: formData.get('notes') || undefined,
   })
@@ -110,7 +110,7 @@ export async function createIncome(_prev: unknown, formData: FormData) {
     original_price: parsed.data.original_price,
     discount_amount: discountAmount,
     final_price: finalPrice,
-    payment_on_delivery: parsed.data.payment_on_delivery,
+    delivery_amount: parsed.data.delivery_amount,
     income_date: parsed.data.income_date,
     notes: parsed.data.notes ?? null,
   })
@@ -133,7 +133,7 @@ export async function updateIncome(_prev: unknown, formData: FormData) {
     original_price: formData.get('original_price'),
     has_discount: hasDiscount,
     discount_amount: hasDiscount ? formData.get('discount_amount') : 0,
-    payment_on_delivery: formData.get('payment_on_delivery') === 'true',
+    delivery_amount: formData.get('delivery_amount') || 0,
     income_date: formData.get('income_date'),
     notes: formData.get('notes') || undefined,
   })
@@ -149,7 +149,7 @@ export async function updateIncome(_prev: unknown, formData: FormData) {
     original_price: parsed.data.original_price,
     discount_amount: discountAmount,
     final_price: finalPrice,
-    payment_on_delivery: parsed.data.payment_on_delivery,
+    delivery_amount: parsed.data.delivery_amount,
     income_date: parsed.data.income_date,
     notes: parsed.data.notes ?? null,
   }).eq('id', incomeId).eq('user_id', user.id)

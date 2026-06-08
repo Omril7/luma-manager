@@ -42,3 +42,18 @@ Manual tasks that require dashboard access, credentials, or external services.
 
 ## Deployment - Omri's account - move to Eden's account
 - [ ] Deploy to Vercel under Omri's account at https://luma-manager.vercel.app
+
+---
+
+## To Investigate
+
+### Settings — EmailSettingsForm
+- Gmail app password is already in `.env.local` as `GMAIL_APP_PASSWORD` (server-side env var).
+- The settings form currently asks the user to enter it again and stores it in the DB.
+- **Question:** Is the DB field needed at all? Could simplify the form to only ask for the **recipient email** (the accountant's address) instead of managing SMTP credentials per-user.
+- If yes — remove `gmail_user` / `gmail_app_password` from the settings table form and use only the env vars for sending; add a single "recipient email" field instead.
+
+### IncomeModal — payment_on_delivery field
+- Currently a checkbox (boolean). Doesn't capture how much of the price is paid on delivery.
+- **Question:** Should this be a number input instead — the amount of the original price that is collected on delivery (partial or full)?
+- If yes — change the DB column / field from `boolean` to `numeric`, update the form, table display, and any summary logic that references it.

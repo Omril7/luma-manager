@@ -152,27 +152,17 @@ export function EmailSettingsForm({ settings }: { settings: Settings | null }) {
       <CardContent>
         <form action={action} className="space-y-4">
           <div className="space-y-1">
-            <Label htmlFor="gmail_user">כתובת Gmail</Label>
+            <Label htmlFor="accountant_email">כתובת מייל של רואה החשבון</Label>
             <Input
-              id="gmail_user"
-              name="gmail_user"
+              id="accountant_email"
+              name="accountant_email"
               type="email"
-              defaultValue={settings?.gmail_user ?? ''}
-              placeholder="your@gmail.com"
-              dir="ltr"
-            />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="gmail_app_password">סיסמת אפליקציה (App Password)</Label>
-            <PasswordInput
-              id="gmail_app_password"
-              name="gmail_app_password"
-              defaultValue={settings?.gmail_app_password ?? ''}
-              placeholder="xxxx xxxx xxxx xxxx"
+              defaultValue={settings?.accountant_email ?? ''}
+              placeholder="accountant@example.com"
               dir="ltr"
             />
             <p className="text-xs text-muted-foreground">
-              נוצר ב-Google Account → אבטחה → סיסמאות אפליקציה
+              אל כתובת זו יישלח הסיכום החודשי
             </p>
           </div>
           <SubmitButton label="שמור" pendingLabel="שומר..." />

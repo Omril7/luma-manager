@@ -10,7 +10,7 @@ const webhookSchema = z.object({
   original_price: z.number().nonnegative(),
   discount_amount: z.number().nonnegative().default(0),
   final_price: z.number().nonnegative(),
-  payment_on_delivery: z.boolean().default(false),
+  delivery_amount: z.number().nonnegative().default(0),
   income_date: z.string().min(1),
 })
 
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     original_price: parsed.data.original_price,
     discount_amount: parsed.data.discount_amount,
     final_price: parsed.data.final_price,
-    payment_on_delivery: parsed.data.payment_on_delivery,
+    delivery_amount: parsed.data.delivery_amount,
     income_date: parsed.data.income_date,
   })
 

@@ -20,8 +20,7 @@ export type Database = {
           paycheck_percent: number
           opening_balance: number
           business_name: string | null
-          gmail_user: string | null
-          gmail_app_password: string | null
+          accountant_email: string | null
           created_at: string
         }
         Insert: {
@@ -31,8 +30,7 @@ export type Database = {
           paycheck_percent?: number
           opening_balance?: number
           business_name?: string | null
-          gmail_user?: string | null
-          gmail_app_password?: string | null
+          accountant_email?: string | null
           created_at?: string
         }
         Update: {
@@ -42,8 +40,7 @@ export type Database = {
           paycheck_percent?: number
           opening_balance?: number
           business_name?: string | null
-          gmail_user?: string | null
-          gmail_app_password?: string | null
+          accountant_email?: string | null
           created_at?: string
         }
         Relationships: []
@@ -185,7 +182,7 @@ export type Database = {
           original_price: number
           discount_amount: number
           final_price: number
-          payment_on_delivery: boolean
+          delivery_amount: number
           income_date: string
           notes: string | null
           created_at: string
@@ -200,7 +197,7 @@ export type Database = {
           original_price: number
           discount_amount?: number
           final_price: number
-          payment_on_delivery?: boolean
+          delivery_amount?: number
           income_date: string
           notes?: string | null
           created_at?: string
@@ -215,7 +212,7 @@ export type Database = {
           original_price?: number
           discount_amount?: number
           final_price?: number
-          payment_on_delivery?: boolean
+          delivery_amount?: number
           income_date?: string
           notes?: string | null
           created_at?: string

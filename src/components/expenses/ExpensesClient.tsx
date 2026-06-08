@@ -54,12 +54,12 @@ type Props = {
   expenses: Expense[]
   allInstallments: Installment[]
   vatRate: number
-  hasGmailConfig: boolean
+  hasAccountantEmail: boolean
 }
 
 const MONTH_NAMES = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר']
 
-export default function ExpensesClient({ categories, expenses, allInstallments, vatRate, hasGmailConfig }: Props) {
+export default function ExpensesClient({ categories, expenses, allInstallments, vatRate, hasAccountantEmail }: Props) {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -210,7 +210,7 @@ export default function ExpensesClient({ categories, expenses, allInstallments, 
 
       {showSummaryModal && (
         <SendSummaryModal
-          hasGmailConfig={hasGmailConfig}
+          hasAccountantEmail={hasAccountantEmail}
           onClose={() => setShowSummaryModal(false)}
         />
       )}

@@ -1,9 +1,12 @@
 import nodemailer from 'nodemailer'
 
-export function createTransporter(gmailUser: string, gmailAppPassword: string) {
+function createTransporter() {
   return nodemailer.createTransport({
     service: 'gmail',
-    auth: { user: gmailUser, pass: gmailAppPassword },
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_APP_PASSWORD,
+    },
   })
 }
 
@@ -12,14 +15,12 @@ export interface SendSummaryOptions {
   subject: string
   html: string
   attachments?: Array<{ filename: string; content: Buffer; contentType: string }>
-  gmailUser: string
-  gmailAppPassword: string
 }
 
 export async function sendSummaryEmail(opts: SendSummaryOptions) {
-  const transporter = createTransporter(opts.gmailUser, opts.gmailAppPassword)
+  const transporter = createTransporter()
   await transporter.sendMail({
-    from: opts.gmailUser,
+    from: process.env.GMAIL_USER,
     to: opts.to,
     subject: opts.subject,
     html: opts.html,

@@ -15,8 +15,7 @@ const balanceSchema = z.object({
 })
 
 const emailSchema = z.object({
-  gmail_user: z.string().email('כתובת מייל לא תקינה').optional().or(z.literal('')),
-  gmail_app_password: z.string().optional(),
+  accountant_email: z.string().email('כתובת מייל לא תקינה').optional().or(z.literal('')),
 })
 
 const passwordSchema = z.object({
@@ -72,16 +71,14 @@ export async function saveEmailSettings(_prev: unknown, formData: FormData) {
   if (!user) return { error: 'לא מחובר' }
 
   const parsed = emailSchema.safeParse({
-    gmail_user: formData.get('gmail_user'),
-    gmail_app_password: formData.get('gmail_app_password'),
+    accountant_email: formData.get('accountant_email'),
   })
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
   const { error } = await supabase.from('settings').upsert(
     {
       user_id: user.id,
-      gmail_user: parsed.data.gmail_user || null,
-      gmail_app_password: parsed.data.gmail_app_password || null,
+      accountant_email: parsed.data.accountant_email || null,
     },
     { onConflict: 'user_id' }
   )

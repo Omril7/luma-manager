@@ -15,9 +15,13 @@ type Product = { id: string; name: string }
 type IncomeRow = {
   id: string; product_name: string; product_id: string | null; order_id: string | null
   original_price: number; discount_amount: number; final_price: number
-  payment_on_delivery: boolean; income_date: string; notes: string | null
+  delivery_amount: number; income_date: string; notes: string | null
 }
 type Props = { products: Product[]; income?: IncomeRow; onClose: () => void }
+
+function ils(n: number) {
+  return n.toLocaleString('he-IL', { style: 'currency', currency: 'ILS', maximumFractionDigits: 2 })
+}
 
 export default function IncomeModal({ products, income, onClose }: Props) {
   const [isPending, startTransition] = useTransition()
@@ -25,11 +29,13 @@ export default function IncomeModal({ products, income, onClose }: Props) {
   const [hasDiscount, setHasDiscount] = useState(income ? income.discount_amount > 0 : false)
   const [originalPrice, setOriginalPrice] = useState(income?.original_price ?? 0)
   const [discountAmount, setDiscountAmount] = useState(income?.discount_amount ?? 0)
+  const [deliveryAmount, setDeliveryAmount] = useState(income?.delivery_amount ?? 0)
   const [useProduct, setUseProduct] = useState(!!income?.product_id)
   const [incomeDate, setIncomeDate] = useState(income?.income_date ?? new Date().toISOString().slice(0, 10))
   const formRef = useRef<HTMLFormElement>(null)
 
   const finalPrice = originalPrice - (hasDiscount ? discountAmount : 0)
+  const productIncome = finalPrice - deliveryAmount
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -122,16 +128,43 @@ export default function IncomeModal({ products, income, onClose }: Props) {
             )}
           </div>
 
-          <div className="bg-green-500/10 border border-green-500/30 rounded-lg px-4 py-3">
-            <p className="text-xs text-green-700 dark:text-green-400 mb-0.5">מחיר סופי</p>
-            <p className="text-xl font-bold text-green-800 dark:text-green-300">
-              {finalPrice.toLocaleString('he-IL', { style: 'currency', currency: 'ILS', maximumFractionDigits: 2 })}
-            </p>
+          <div className="space-y-1.5">
+            <Label>סכום משלוח</Label>
+            <div className="relative">
+              <Input
+                name="delivery_amount"
+                type="number"
+                step="0.01"
+                min="0"
+                max={finalPrice}
+                value={deliveryAmount}
+                onChange={e => setDeliveryAmount(Number(e.target.value))}
+                className="pl-8"
+                placeholder="0"
+              />
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">₪</span>
+            </div>
+            <p className="text-xs text-muted-foreground">חלק מהמחיר שמיועד לדמי משלוח (0 אם אין משלוח)</p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Checkbox name="payment_on_delivery" value="true" defaultChecked={income?.payment_on_delivery} id="payment_on_delivery" />
-            <Label htmlFor="payment_on_delivery" className="font-normal cursor-pointer">תשלום במסירה</Label>
+          {/* Price breakdown */}
+          <div className="bg-green-500/10 border border-green-500/30 rounded-lg px-4 py-3 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">סה&quot;כ שהתקבל</p>
+              <p className="text-xl font-bold text-green-800 dark:text-green-300">{ils(finalPrice)}</p>
+            </div>
+            {deliveryAmount > 0 && (
+              <>
+                <div className="flex items-center justify-between text-sm border-t border-green-500/20 pt-1.5">
+                  <span className="text-muted-foreground">הכנסת מוצר</span>
+                  <span className="font-medium text-foreground">{ils(productIncome)}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">דמי משלוח</span>
+                  <span className="font-medium text-blue-600 dark:text-blue-400">{ils(deliveryAmount)}</span>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="space-y-1.5">

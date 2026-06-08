@@ -7,8 +7,7 @@ export interface Settings {
   paycheck_percent: number
   opening_balance: number
   business_name: string | null
-  gmail_user: string | null
-  gmail_app_password: string | null
+  accountant_email: string | null
 }
 
 interface SettingsStore {

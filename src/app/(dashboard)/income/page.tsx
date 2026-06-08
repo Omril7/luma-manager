@@ -15,7 +15,7 @@ export default async function IncomePage() {
       .order('name'),
     supabase
       .from('income')
-      .select('id, product_name, product_id, order_id, original_price, discount_amount, final_price, payment_on_delivery, income_date, notes, source')
+      .select('id, product_name, product_id, order_id, original_price, discount_amount, final_price, delivery_amount, income_date, notes, source')
       .eq('user_id', user.id)
       .order('income_date', { ascending: false }),
   ])

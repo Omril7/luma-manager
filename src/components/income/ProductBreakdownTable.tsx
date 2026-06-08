@@ -4,6 +4,7 @@ type IncomeRow = {
   product_name: string
   final_price: number
   discount_amount: number
+  delivery_amount: number
 }
 
 type ProductStat = {
@@ -52,7 +53,7 @@ export default function ProductBreakdownTable({ rows }: Props) {
   const byProduct = rows.reduce<Record<string, ProductStat>>((acc, r) => {
     if (!acc[r.product_name]) acc[r.product_name] = { name: r.product_name, units: 0, revenue: 0, discountLoss: 0 }
     acc[r.product_name].units += 1
-    acc[r.product_name].revenue += r.final_price
+    acc[r.product_name].revenue += r.final_price - r.delivery_amount
     acc[r.product_name].discountLoss += r.discount_amount
     return acc
   }, {})
