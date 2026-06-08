@@ -94,7 +94,7 @@ export async function approveMonthClose(
         supabase.from('settings').select('accountant_email, business_name, paycheck_percent').eq('user_id', user.id).single(),
         supabase.from('income').select('final_price').eq('user_id', user.id).like('income_date', `${monthKey}%`),
         supabase.from('expense_installments')
-          .select('amount, expenses!inner(receipts(id, cloudinary_url, file_type))')
+          .select('amount, expense_id')
           .eq('user_id', user.id)
           .like('due_month', `${monthKey}%`),
         supabase.from('authority_payments').select('type, amount').eq('user_id', user.id).like('payment_month', `${monthKey}%`),
@@ -107,16 +107,19 @@ export async function approveMonthClose(
 
         const totalIncome = (incomeRes.data ?? []).reduce((s, r) => s + r.final_price, 0)
 
-        type InstallmentRow = { amount: number; expenses: { receipts: { id: string; cloudinary_url: string; file_type: string | null }[] } }
-        const installments = (installmentsRes.data ?? []) as unknown as InstallmentRow[]
+        const installments = installmentsRes.data ?? []
         const totalExpenses = installments.reduce((s, r) => s + r.amount, 0)
         const grossProfit = totalIncome - totalExpenses
         const salary = grossProfit * (paycheckPct / 100)
         const authorityPayments = authorityRes.data ?? []
         const authorityTotal = authorityPayments.reduce((s, r) => s + r.amount, 0)
 
-        // Download receipts for attachment
-        const allReceipts = installments.flatMap(r => r.expenses.receipts)
+        // Fetch receipts directly by expense IDs — avoids fragile nested join
+        const expenseIds = installments.map(r => r.expense_id).filter(Boolean)
+        const receiptsRes = expenseIds.length > 0
+          ? await supabase.from('receipts').select('id, cloudinary_url, file_type').eq('user_id', user.id).in('expense_id', expenseIds)
+          : { data: [] }
+        const allReceipts = receiptsRes.data ?? []
         const attachments: { filename: string; content: Buffer; contentType: string }[] = []
         for (const receipt of allReceipts) {
           try {
