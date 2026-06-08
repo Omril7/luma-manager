@@ -1,3 +1,17 @@
+## [2026-06-08] Bug fixes & chart redesign
+
+### Bug fixes
+- Login/register: trim email before Supabase auth calls — mobile keyboards append trailing spaces which GoTrue rejects as "Invalid input"
+- Dashboard `approveMonthClose`: added missing `UNIQUE (user_id, snapshot_month)` constraint on `balance_snapshots`; `upsert` with `onConflict` requires a real unique constraint or Postgres throws "no unique or exclusion constraint matching the ON CONFLICT specification"
+  - Migration: `supabase/migrations/20260608000001_balance_snapshots_unique.sql`
+
+### Chart redesign
+- Bar charts: Y-axis ticks moved inside chart area (`mirror={true}`), axis lines and tick lines removed, horizontal-only grid, bar radius increased to 6px
+- Daily income chart: X-axis shows every 5th day to avoid crowding 31 labels
+- Pie chart replaced with donut (innerRadius=60); inline floating labels removed; replaced with an aligned legend list (color swatch + name + % + ₪) that sits beside the chart
+- Tooltip styled with app design tokens (`hsl(var(--card/border/foreground))`) for full dark-mode compatibility
+- Bar colors updated to match app palette: expenses → `#3d6ba3` (matches `--primary`), income → `#2a9d8f`
+
 ## [2026-06-08] Schema changes — email settings + delivery amount
 - `settings`: removed `gmail_user` and `gmail_app_password`; added `accountant_email` (the recipient address for summary emails; SMTP credentials stay in env vars only)
 - `income`: replaced `payment_on_delivery boolean` with `delivery_amount numeric(12,2) DEFAULT 0`; zero = no delivery fee, any positive value = delivery portion of final_price

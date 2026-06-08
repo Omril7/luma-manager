@@ -24,6 +24,17 @@ function fmt(n: number) {
   return `₪${n.toLocaleString('he-IL', { maximumFractionDigits: 0 })}`
 }
 
+const tooltipStyle: React.CSSProperties = {
+  background: 'hsl(var(--card))',
+  border: '1px solid hsl(var(--border))',
+  borderRadius: '10px',
+  fontSize: 12,
+  direction: 'rtl',
+  color: 'hsl(var(--foreground))',
+  boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+  padding: '8px 12px',
+}
+
 export default function IncomeCharts({ rows, isAnnual, year, month }: Props) {
   if (isAnnual) {
     const data = Array.from({ length: 12 }, (_, i) => {
@@ -37,12 +48,30 @@ export default function IncomeCharts({ rows, isAnnual, year, month }: Props) {
       <div className="bg-card rounded-xl border border-border p-5">
         <h3 className="text-sm font-medium text-muted-foreground mb-4">הכנסות לפי חודש — {year}</h3>
         <ResponsiveContainer width="100%" height={240}>
-          <BarChart data={data} margin={{ top: 4, right: 4, left: 4, bottom: 4 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-            <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-            <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `₪${Number(v).toLocaleString()}`} />
-            <Tooltip formatter={(v) => fmt(Number(v))} />
-            <Bar dataKey="total" fill="#10b981" radius={[4, 4, 0, 0]} name="סה״כ" />
+          <BarChart data={data} margin={{ top: 8, right: 4, left: 0, bottom: 4 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+            <XAxis
+              dataKey="name"
+              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              mirror={true}
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+              tickFormatter={v => `₪${Number(v).toLocaleString('he-IL', { maximumFractionDigits: 0 })}`}
+              width={1}
+            />
+            <Tooltip
+              formatter={(v) => [fmt(Number(v)), 'הכנסות']}
+              contentStyle={tooltipStyle}
+              labelStyle={{ color: 'hsl(var(--muted-foreground))', marginBottom: 2, fontWeight: 500 }}
+              itemStyle={{ color: 'hsl(var(--foreground))', fontWeight: 700 }}
+              cursor={{ fill: 'rgba(0,0,0,0.04)' }}
+            />
+            <Bar dataKey="total" fill="#2a9d8f" radius={[6, 6, 0, 0]} name="הכנסות" />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -53,7 +82,6 @@ export default function IncomeCharts({ rows, isAnnual, year, month }: Props) {
   const monthKey = `${year}-${String(month).padStart(2, '0')}`
   const monthRows = rows.filter(r => r.income_date.slice(0, 7) === monthKey)
 
-  // Group by day
   const byDay = monthRows.reduce<Record<string, number>>((acc, r) => {
     const day = r.income_date.slice(8, 10)
     acc[day] = (acc[day] ?? 0) + r.final_price
@@ -70,12 +98,31 @@ export default function IncomeCharts({ rows, isAnnual, year, month }: Props) {
     <div className="bg-card rounded-xl border border-border p-5">
       <h3 className="text-sm font-medium text-muted-foreground mb-4">הכנסות יומיות — {MONTH_NAMES[month - 1]}</h3>
       <ResponsiveContainer width="100%" height={240}>
-        <BarChart data={dailyData} margin={{ top: 4, right: 4, left: 4, bottom: 4 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-          <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-          <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `₪${Number(v).toLocaleString()}`} />
-          <Tooltip formatter={(v) => fmt(Number(v))} />
-          <Bar dataKey="total" fill="#10b981" radius={[4, 4, 0, 0]} name="הכנסה" />
+        <BarChart data={dailyData} margin={{ top: 8, right: 4, left: 0, bottom: 4 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+          <XAxis
+            dataKey="name"
+            tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+            axisLine={false}
+            tickLine={false}
+            interval={4}
+          />
+          <YAxis
+            mirror={true}
+            axisLine={false}
+            tickLine={false}
+            tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+            tickFormatter={v => `₪${Number(v).toLocaleString('he-IL', { maximumFractionDigits: 0 })}`}
+            width={1}
+          />
+          <Tooltip
+            formatter={(v) => [fmt(Number(v)), 'הכנסה']}
+            contentStyle={tooltipStyle}
+            labelStyle={{ color: 'hsl(var(--muted-foreground))', marginBottom: 2, fontWeight: 500 }}
+            itemStyle={{ color: 'hsl(var(--foreground))', fontWeight: 700 }}
+            cursor={{ fill: 'rgba(0,0,0,0.04)' }}
+          />
+          <Bar dataKey="total" fill="#2a9d8f" radius={[6, 6, 0, 0]} name="הכנסה" />
         </BarChart>
       </ResponsiveContainer>
     </div>

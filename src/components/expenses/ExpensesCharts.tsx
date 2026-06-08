@@ -21,7 +21,10 @@ type Props = {
   month: number
 }
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316']
+const COLORS = [
+  '#3d6ba3', '#e8953a', '#2a9d8f', '#c0505a',
+  '#7b68b5', '#5d8a4e', '#c4893e', '#8b7ec4',
+]
 
 const MONTH_NAMES = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר']
 
@@ -29,16 +32,27 @@ function fmt(n: number) {
   return `₪${n.toLocaleString('he-IL', { maximumFractionDigits: 0 })}`
 }
 
+const tooltipStyle: React.CSSProperties = {
+  background: 'hsl(var(--card))',
+  border: '1px solid hsl(var(--border))',
+  borderRadius: '10px',
+  fontSize: 12,
+  direction: 'rtl',
+  color: 'hsl(var(--foreground))',
+  boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+  padding: '8px 12px',
+}
+
 export default function ExpensesCharts({ installments, isAnnual, year, month }: Props) {
   const business = installments.filter(i => !i.expenses?.is_personal)
 
   if (isAnnual) {
-    const monthlyTotals = Array.from({ length: 12 }, (_, i) => {
+    const data = Array.from({ length: 12 }, (_, i) => {
       const m = String(i + 1).padStart(2, '0')
       const key = `${year}-${m}`
       const total = business
-        .filter(i => i.due_month.slice(0, 7) === key)
-        .reduce((sum, i) => sum + i.amount, 0)
+        .filter(inst => inst.due_month.slice(0, 7) === key)
+        .reduce((sum, inst) => sum + inst.amount, 0)
       return { name: MONTH_NAMES[i], total }
     })
 
@@ -46,19 +60,37 @@ export default function ExpensesCharts({ installments, isAnnual, year, month }: 
       <div className="bg-card rounded-xl border border-border p-5">
         <h3 className="text-sm font-medium text-muted-foreground mb-4">הוצאות לפי חודש — {year}</h3>
         <ResponsiveContainer width="100%" height={260}>
-          <BarChart data={monthlyTotals} margin={{ top: 4, right: 4, left: 4, bottom: 4 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-            <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-            <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `₪${v.toLocaleString()}`} />
-            <Tooltip formatter={(v) => fmt(Number(v))} />
-            <Bar dataKey="total" fill="#3b82f6" radius={[4, 4, 0, 0]} name="סה״כ" />
+          <BarChart data={data} margin={{ top: 8, right: 4, left: 0, bottom: 4 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+            <XAxis
+              dataKey="name"
+              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              mirror={true}
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+              tickFormatter={v => `₪${Number(v).toLocaleString('he-IL', { maximumFractionDigits: 0 })}`}
+              width={1}
+            />
+            <Tooltip
+              formatter={(v) => [fmt(Number(v)), 'הוצאות']}
+              contentStyle={tooltipStyle}
+              labelStyle={{ color: 'hsl(var(--muted-foreground))', marginBottom: 2, fontWeight: 500 }}
+              itemStyle={{ color: 'hsl(var(--foreground))', fontWeight: 700 }}
+              cursor={{ fill: 'rgba(0,0,0,0.04)' }}
+            />
+            <Bar dataKey="total" fill="#3d6ba3" radius={[6, 6, 0, 0]} name="הוצאות" />
           </BarChart>
         </ResponsiveContainer>
       </div>
     )
   }
 
-  // Monthly pie chart — by category
+  // Monthly pie — by category
   const monthKey = `${year}-${String(month).padStart(2, '0')}`
   const monthInstallments = business.filter(i => i.due_month.slice(0, 7) === monthKey)
 
@@ -70,31 +102,63 @@ export default function ExpensesCharts({ installments, isAnnual, year, month }: 
 
   const pieData = Object.entries(byCategory).map(([name, value]) => ({ name, value }))
 
-  if (pieData.length === 0) {
-    return null
-  }
+  if (pieData.length === 0) return null
+
+  const total = pieData.reduce((s, d) => s + d.value, 0)
 
   return (
     <div className="bg-card rounded-xl border border-border p-5">
       <h3 className="text-sm font-medium text-muted-foreground mb-4">הוצאות לפי קטגוריה</h3>
-      <ResponsiveContainer width="100%" height={260}>
-        <PieChart>
-          <Pie
-            data={pieData}
-            cx="50%"
-            cy="50%"
-            outerRadius={90}
-            dataKey="value"
-            label={({ name, percent }: { name?: string; percent?: number }) => `${name ?? ''} ${((percent ?? 0) * 100).toFixed(0)}%`}
-            labelLine={false}
-          >
-            {pieData.map((_, index) => (
-              <Cell key={index} fill={COLORS[index % COLORS.length]} />
-            ))}
-          </Pie>
-          <Tooltip formatter={(v) => fmt(Number(v))} />
-        </PieChart>
-      </ResponsiveContainer>
+      <div className="flex flex-col sm:flex-row-reverse gap-6 items-center">
+        {/* Legend — right side in RTL */}
+        <div className="w-full sm:w-52 flex-shrink-0 space-y-2" dir="rtl">
+          {pieData.map((entry, i) => (
+            <div key={entry.name} className="flex items-center justify-between gap-2 text-sm">
+              <div className="flex items-center gap-2 min-w-0">
+                <span
+                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                  style={{ background: COLORS[i % COLORS.length] }}
+                />
+                <span className="text-foreground truncate">{entry.name}</span>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  {((entry.value / total) * 100).toFixed(0)}%
+                </span>
+                <span className="font-semibold text-foreground tabular-nums">{fmt(entry.value)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Donut chart */}
+        <div className="flex-1 min-w-0">
+          <ResponsiveContainer width="100%" height={220}>
+            <PieChart>
+              <Pie
+                data={pieData}
+                cx="50%"
+                cy="50%"
+                innerRadius={60}
+                outerRadius={95}
+                dataKey="value"
+                strokeWidth={2}
+                stroke="hsl(var(--card))"
+              >
+                {pieData.map((_, index) => (
+                  <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip
+                formatter={(v) => [fmt(Number(v))]}
+                contentStyle={tooltipStyle}
+                itemStyle={{ color: 'hsl(var(--foreground))', fontWeight: 700 }}
+                labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
     </div>
   )
 }
