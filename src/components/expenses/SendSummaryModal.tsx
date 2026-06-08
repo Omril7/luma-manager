@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { MonthPicker, type MonthPickerValue } from '@/components/ui/month-picker'
@@ -16,7 +17,6 @@ export default function SendSummaryModal({ onClose, hasAccountantEmail }: Props)
   })
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle')
   const [error, setError] = useState('')
-  const [stats, setStats] = useState<{ vatRecognizedCount: number; personalCount: number; attachmentCount: number } | null>(null)
 
   async function handleSend() {
     setStatus('sending'); setError('')
@@ -26,9 +26,9 @@ export default function SendSummaryModal({ onClose, hasAccountantEmail }: Props)
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ year: monthValue.year, month: monthValue.month }),
       })
-      const data = await res.json() as { success?: boolean; error?: string; stats?: typeof stats }
+      const data = await res.json() as { success?: boolean; error?: string }
       if (!res.ok || data.error) { setError(data.error ?? 'שגיאה בשליחת המייל'); setStatus('error') }
-      else { setStats(data.stats ?? null); setStatus('success') }
+      else { setStatus('success') }
     } catch {
       setError('שגיאת רשת — אנא נסה שוב'); setStatus('error')
     }
@@ -43,15 +43,8 @@ export default function SendSummaryModal({ onClose, hasAccountantEmail }: Props)
 
         {status === 'success' ? (
           <div className="text-center space-y-3 py-4">
-            <div className="text-4xl">✅</div>
+            <CheckCircle className="mx-auto text-green-600 dark:text-green-400" size={48} />
             <p className="font-medium text-green-700 dark:text-green-400">המייל נשלח בהצלחה!</p>
-            {stats && (
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>הוצאות עסקיות מוכרות מע&quot;מ: {stats.vatRecognizedCount}</li>
-                <li>הוצאות אישיות: {stats.personalCount}</li>
-                <li>קבלות מצורפות: {stats.attachmentCount}</li>
-              </ul>
-            )}
             <Button onClick={onClose} className="mt-2">סגור</Button>
           </div>
         ) : (

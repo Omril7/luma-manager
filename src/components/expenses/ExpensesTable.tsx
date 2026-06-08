@@ -5,6 +5,7 @@ import { deleteExpense } from '@/app/(dashboard)/expenses/actions'
 import { toast } from 'sonner'
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table'
 import { Button } from '@/components/ui/button'
+import { FileText, Image } from 'lucide-react'
 
 type Receipt = {
   id: string
@@ -140,8 +141,8 @@ export default function ExpensesTable({ expenses, filterMonth, onEdit }: Props) 
         r.receipts.length > 0 ? (
           <div className="flex gap-1">
             {r.receipts.map(rec => (
-              <a key={rec.id} href={rec.cloudinary_url} target="_blank" rel="noreferrer" title="פתח קבלה">
-                {rec.file_type === 'pdf' ? '📄' : '🖼'}
+              <a key={rec.id} href={rec.cloudinary_url} target="_blank" rel="noreferrer" title="פתח קבלה" className="text-muted-foreground hover:text-foreground transition-colors">
+                {rec.file_type === 'pdf' ? <FileText size={16} /> : <Image size={16} />}
               </a>
             ))}
           </div>

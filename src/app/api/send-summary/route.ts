@@ -17,6 +17,7 @@ function monthLabel(year: number, month: number) {
 
 type Receipt = {
   id: string
+  expense_id: string
   cloudinary_url: string
   file_type: string | null
 }
@@ -32,7 +33,6 @@ type InstallmentRow = {
     is_personal: boolean
     transaction_date: string
     expense_categories: { name: string; is_vat_recognized: boolean } | null
-    receipts: Receipt[]
   }
 }
 
@@ -59,24 +59,47 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'לא הוגדרה כתובת מייל של רואה החשבון — אנא הגדר בעמוד ההגדרות' }, { status: 400 })
   }
 
-  const monthKey = `${year}-${String(month).padStart(2, '0')}`
+  const mm = String(month).padStart(2, '0')
+  const startOfMonth = `${year}-${mm}-01`
+  const nextYear = month === 12 ? year + 1 : year
+  const nextMonth = month === 12 ? 1 : month + 1
+  const startOfNextMonth = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`
 
-  const { data: raw } = await supabase
+  const { data: raw, error: queryError } = await supabase
     .from('expense_installments')
     .select(`
       id, amount, vat_amount, due_month,
       expenses!inner(
         id, description, is_personal, transaction_date,
-        expense_categories(name, is_vat_recognized),
-        receipts(id, cloudinary_url, file_type)
+        expense_categories(name, is_vat_recognized)
       )
     `)
     .eq('user_id', user.id)
-    .like('due_month', `${monthKey}%`)
+    .gte('due_month', startOfMonth)
+    .lt('due_month', startOfNextMonth)
 
-  if (!raw) return NextResponse.json({ error: 'שגיאה בטעינת נתונים' }, { status: 500 })
+  if (queryError || !raw) {
+    return NextResponse.json({ error: queryError?.message ?? 'שגיאה בטעינת נתונים' }, { status: 500 })
+  }
 
   const rows = raw as unknown as InstallmentRow[]
+
+  // Query receipts separately — nested joins through !inner are unreliable
+  const expenseIds = Array.from(new Set(rows.map(r => r.expenses.id)))
+  const { data: receiptsData } = expenseIds.length > 0
+    ? await supabase
+        .from('receipts')
+        .select('id, expense_id, cloudinary_url, file_type')
+        .in('expense_id', expenseIds)
+        .eq('user_id', user.id)
+    : { data: [] }
+
+  const receiptsByExpense = new Map<string, Receipt[]>()
+  for (const r of receiptsData ?? []) {
+    const list = receiptsByExpense.get(r.expense_id) ?? []
+    list.push(r)
+    receiptsByExpense.set(r.expense_id, list)
+  }
 
   const vatRecognizedRows = rows.filter(
     r => !r.expenses.is_personal && r.expenses.expense_categories?.is_vat_recognized
@@ -87,74 +110,121 @@ export async function POST(req: NextRequest) {
   const totalVat = vatRecognizedRows.reduce((s, r) => s + r.vat_amount, 0)
   const totalPersonal = personalRows.reduce((s, r) => s + r.amount, 0)
 
-  const businessTableRows = vatRecognizedRows.map(r => `
-    <tr>
-      <td style="padding:6px 8px;border-bottom:1px solid #eee">${new Date(r.expenses.transaction_date).toLocaleDateString('he-IL')}</td>
-      <td style="padding:6px 8px;border-bottom:1px solid #eee">${r.expenses.description}</td>
-      <td style="padding:6px 8px;border-bottom:1px solid #eee">${r.expenses.expense_categories?.name ?? '—'}</td>
-      <td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:left">${fmt(r.amount)}</td>
-      <td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:left">${r.vat_amount > 0 ? fmt(r.vat_amount) : '—'}</td>
-    </tr>`).join('')
-
-  const personalTableRows = personalRows.map(r => `
-    <tr>
-      <td style="padding:6px 8px;border-bottom:1px solid #eee">${new Date(r.expenses.transaction_date).toLocaleDateString('he-IL')}</td>
-      <td style="padding:6px 8px;border-bottom:1px solid #eee">${r.expenses.description}</td>
-      <td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:left">${fmt(r.amount)}</td>
-    </tr>`).join('')
+  // Inline style constants — Gmail strips <style> blocks, everything must be inline
+  const FONT = 'font-family:Arial,Helvetica,sans-serif;'
+  const TH = `${FONT}padding:10px 14px;text-align:right;direction:rtl;font-size:12px;font-weight:700;color:#6b7280;background:#f9fafb;border-bottom:2px solid #e5e7eb;`
+  const TD = `${FONT}padding:10px 14px;text-align:right;direction:rtl;font-size:14px;color:#374151;border-bottom:1px solid #e5e7eb;`
+  const TD_NUM = `${TD}white-space:nowrap;`
+  const TD_FOOT = `${FONT}padding:10px 14px;text-align:right;direction:rtl;font-size:14px;font-weight:700;background:#eff6ff;color:#1e40af;white-space:nowrap;`
+  const TD_FOOT_PERSONAL = `${FONT}padding:10px 14px;text-align:right;direction:rtl;font-size:14px;font-weight:700;background:#f9fafb;color:#374151;white-space:nowrap;`
 
   const label = monthLabel(year, month)
   const businessName = settings.business_name ?? ''
 
   const html = `<!DOCTYPE html>
 <html dir="rtl" lang="he">
-<head><meta charset="UTF-8"><style>
-  body{font-family:Arial,sans-serif;direction:rtl;color:#111;padding:24px}
-  h1{color:#1e40af}
-  h2{color:#374151;border-bottom:2px solid #e5e7eb;padding-bottom:6px;margin-top:32px}
-  table{width:100%;border-collapse:collapse;margin-bottom:16px}
-  th{background:#f3f4f6;padding:8px;text-align:right;font-weight:600}
-  .footer-row td{font-weight:bold;background:#f9fafb}
-  p{color:#6b7280}
-</style></head>
-<body>
-  <h1>סיכום הוצאות — ${label}${businessName ? ` | ${businessName}` : ''}</h1>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <style>
+    /* Clients that support <style>: iOS Mail, Apple Mail, Gmail mobile app */
+    @media only screen and (max-width:600px) {
+      .mobile-stack td,
+      .mobile-stack th { display:block !important; width:100% !important; box-sizing:border-box !important; }
+      .mobile-stack thead { display:none !important; }
+      .mobile-stack tr { display:block !important; margin-bottom:12px !important; border:1px solid #e5e7eb !important; border-radius:8px !important; }
+      .mobile-stack td:before { font-weight:700; color:#6b7280; font-size:11px; display:block; }
+      .outer-pad { padding:12px 8px !important; }
+      .card-pad { padding:20px 16px !important; }
+    }
+  </style>
+</head>
+<body dir="rtl" style="${FONT}margin:0;padding:0;background:#f3f4f6;direction:rtl;">
+<table dir="rtl" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;">
+  <tr dir="rtl"><td dir="rtl" align="right" class="outer-pad" style="padding:24px 16px;">
+  <table dir="rtl" width="100%" cellpadding="0" cellspacing="0" style="max-width:620px;margin:0 auto;">
 
-  <h2>הוצאות עסקיות מוכרות מע"מ</h2>
-  ${vatRecognizedRows.length > 0 ? `
-  <table>
-    <thead><tr>
-      <th>תאריך</th><th>תיאור</th><th>קטגוריה</th><th>סכום</th><th>מע"מ</th>
-    </tr></thead>
-    <tbody>
-      ${businessTableRows}
-      <tr class="footer-row">
-        <td colspan="3">סה"כ:</td>
-        <td>${fmt(totalVatRecognized)}</td>
-        <td>מע"מ מוכר: ${fmt(totalVat)}</td>
-      </tr>
-    </tbody>
-  </table>` : '<p>אין הוצאות עסקיות מוכרות מע"מ לחודש זה.</p>'}
+    <!-- Header -->
+    <tr dir="rtl"><td dir="rtl" style="background:#1e40af;border-radius:12px 12px 0 0;padding:28px 32px;">
+      <h1 dir="rtl" style="${FONT}margin:0;font-size:22px;color:#ffffff;font-weight:700;direction:rtl;text-align:right;">סיכום הוצאות &mdash; ${label}</h1>
+      ${businessName ? `<p dir="rtl" style="${FONT}margin:6px 0 0;color:#bfdbfe;font-size:14px;direction:rtl;text-align:right;">${businessName}</p>` : ''}
+    </td></tr>
 
-  <h2>הוצאות אישיות (לידיעה בלבד)</h2>
-  ${personalRows.length > 0 ? `
-  <table>
-    <thead><tr>
-      <th>תאריך</th><th>תיאור</th><th>סכום</th>
-    </tr></thead>
-    <tbody>
-      ${personalTableRows}
-      <tr class="footer-row">
-        <td colspan="2">סה"כ:</td>
-        <td>${fmt(totalPersonal)}</td>
-      </tr>
-    </tbody>
-  </table>` : '<p>אין הוצאות אישיות לחודש זה.</p>'}
+    <!-- Card -->
+    <tr dir="rtl"><td dir="rtl" class="card-pad" style="background:#ffffff;border-radius:0 0 12px 12px;padding:28px 32px;border:1px solid #e5e7eb;border-top:none;">
+
+      <!-- Section: business expenses -->
+      <h2 dir="rtl" style="${FONT}margin:0 0 16px;font-size:16px;font-weight:700;color:#111827;border-bottom:2px solid #e5e7eb;padding-bottom:10px;direction:rtl;text-align:right;">הוצאות עסקיות מוכרות מע&quot;מ</h2>
+
+      ${vatRecognizedRows.length > 0 ? `
+      <table dir="rtl" width="100%" cellpadding="0" cellspacing="0" class="mobile-stack" style="border-collapse:collapse;margin-bottom:8px;">
+        <thead>
+          <tr dir="rtl">
+            <th dir="rtl" style="${TH}">תאריך</th>
+            <th dir="rtl" style="${TH}">תיאור</th>
+            <th dir="rtl" style="${TH}">קטגוריה</th>
+            <th dir="rtl" style="${TH}">סכום</th>
+            <th dir="rtl" style="${TH}">מע&quot;מ</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${vatRecognizedRows.map(r => `
+          <tr dir="rtl">
+            <td dir="rtl" style="${TD}">${new Date(r.expenses.transaction_date).toLocaleDateString('he-IL')}</td>
+            <td dir="rtl" style="${TD}">${r.expenses.description}</td>
+            <td dir="rtl" style="${TD}">${r.expenses.expense_categories?.name ?? '—'}</td>
+            <td dir="rtl" style="${TD_NUM}">${fmt(r.amount)}</td>
+            <td dir="rtl" style="${TD_NUM}">${r.vat_amount > 0 ? fmt(r.vat_amount) : '—'}</td>
+          </tr>`).join('')}
+          <tr dir="rtl">
+            <td dir="rtl" colspan="3" style="${TD_FOOT}">סה&quot;כ</td>
+            <td dir="rtl" style="${TD_FOOT}">${fmt(totalVatRecognized)}</td>
+            <td dir="rtl" style="${TD_FOOT}">מע&quot;מ מוכר: ${fmt(totalVat)}</td>
+          </tr>
+        </tbody>
+      </table>` : `<p dir="rtl" style="${FONT}color:#6b7280;font-size:14px;margin:0 0 24px;direction:rtl;text-align:right;">אין הוצאות עסקיות מוכרות מע&quot;מ לחודש זה.</p>`}
+
+      <!-- Section: personal expenses -->
+      <h2 dir="rtl" style="${FONT}margin:32px 0 16px;font-size:16px;font-weight:700;color:#111827;border-bottom:2px solid #e5e7eb;padding-bottom:10px;direction:rtl;text-align:right;">הוצאות אישיות <span style="font-weight:400;color:#6b7280;">(לידיעה בלבד)</span></h2>
+
+      ${personalRows.length > 0 ? `
+      <table dir="rtl" width="100%" cellpadding="0" cellspacing="0" class="mobile-stack" style="border-collapse:collapse;">
+        <thead>
+          <tr dir="rtl">
+            <th dir="rtl" style="${TH}">תאריך</th>
+            <th dir="rtl" style="${TH}">תיאור</th>
+            <th dir="rtl" style="${TH}">סכום</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${personalRows.map(r => `
+          <tr dir="rtl">
+            <td dir="rtl" style="${TD}">${new Date(r.expenses.transaction_date).toLocaleDateString('he-IL')}</td>
+            <td dir="rtl" style="${TD}">${r.expenses.description}</td>
+            <td dir="rtl" style="${TD_NUM}">${fmt(r.amount)}</td>
+          </tr>`).join('')}
+          <tr dir="rtl">
+            <td dir="rtl" colspan="2" style="${TD_FOOT_PERSONAL}">סה&quot;כ</td>
+            <td dir="rtl" style="${TD_FOOT_PERSONAL}">${fmt(totalPersonal)}</td>
+          </tr>
+        </tbody>
+      </table>` : `<p dir="rtl" style="${FONT}color:#6b7280;font-size:14px;margin:0;direction:rtl;text-align:right;">אין הוצאות אישיות לחודש זה.</p>`}
+
+    </td></tr><!-- /card -->
+
+    <!-- Footer -->
+    <tr dir="rtl"><td dir="rtl" style="padding:16px 0 0;" align="center">
+      <p style="${FONT}font-size:12px;color:#9ca3af;margin:0;text-align:center;">נשלח אוטומטית ממערכת לומה</p>
+    </td></tr>
+
+  </table>
+  </td></tr>
+</table>
 </body>
 </html>`
 
   // Download receipt files and attach
-  const allReceipts = rows.flatMap(r => r.expenses.receipts)
+  const allReceipts = Array.from(receiptsByExpense.values()).flat()
   const attachments: { filename: string; content: Buffer; contentType: string }[] = []
 
   for (const receipt of allReceipts) {
@@ -169,7 +239,7 @@ export async function POST(req: NextRequest) {
         contentType: receipt.file_type === 'pdf' ? 'application/pdf' : 'image/jpeg',
       })
     } catch {
-      // Skip failed downloads silently
+      // skip failed downloads
     }
   }
 
@@ -185,12 +255,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 })
   }
 
-  return NextResponse.json({
-    success: true,
-    stats: {
-      vatRecognizedCount: vatRecognizedRows.length,
-      personalCount: personalRows.length,
-      attachmentCount: attachments.length,
-    },
-  })
+  return NextResponse.json({ success: true })
 }

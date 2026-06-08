@@ -146,9 +146,6 @@ export default function DashboardClient({
         toast.error(res.error)
       } else {
         toast.success('החודש נסגר בהצלחה')
-        if (res && 'emailWarning' in res && res.emailWarning) {
-          toast.warning(`המייל לרואה החשבון לא נשלח: ${res.emailWarning}`)
-        }
       }
       setConfirmClose(null)
     })
