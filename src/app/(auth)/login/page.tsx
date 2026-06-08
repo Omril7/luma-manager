@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { PasswordInput } from '@/components/ui/password-input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import Link from 'next/link'
@@ -90,7 +91,7 @@ export default function LoginPage() {
             </div>
             <div className="space-y-1">
               <Label htmlFor="password">סיסמה</Label>
-              <Input id="password" type="password" {...register('password')} />
+              <PasswordInput id="password" {...register('password')} />
               {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
             </div>
             <Button type="submit" className="w-full" disabled={loading}>

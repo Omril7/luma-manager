@@ -6,6 +6,10 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 })
 
+export async function deleteFile(publicId: string): Promise<void> {
+  await cloudinary.uploader.destroy(publicId, { resource_type: 'auto' })
+}
+
 export async function uploadFile(
   buffer: Buffer,
   filename: string,

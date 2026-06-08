@@ -11,6 +11,7 @@ import { toast } from 'sonner'
 import { useEffect } from 'react'
 import { PasskeyManager } from '@/components/layout/PasskeyManager'
 import { Settings2, Wallet, Mail, User } from 'lucide-react'
+import { PasswordInput } from '@/components/ui/password-input'
 
 interface ActionState {
   success?: boolean
@@ -163,10 +164,9 @@ export function EmailSettingsForm({ settings }: { settings: Settings | null }) {
           </div>
           <div className="space-y-1">
             <Label htmlFor="gmail_app_password">סיסמת אפליקציה (App Password)</Label>
-            <Input
+            <PasswordInput
               id="gmail_app_password"
               name="gmail_app_password"
-              type="password"
               defaultValue={settings?.gmail_app_password ?? ''}
               placeholder="xxxx xxxx xxxx xxxx"
               dir="ltr"
@@ -210,10 +210,9 @@ export function AccountSettingsForm({ email }: { email: string }) {
           <p className="text-sm font-medium">שינוי סיסמה</p>
           <div className="space-y-1">
             <Label htmlFor="password">סיסמה חדשה</Label>
-            <Input
+            <PasswordInput
               id="password"
               name="password"
-              type="password"
               placeholder="לפחות 6 תווים"
               minLength={6}
             />

@@ -30,6 +30,8 @@ export interface DataTableColumn<T> {
   cell: (row: T) => React.ReactNode
   sortValue?: (row: T) => string | number | null | undefined
   defaultHidden?: boolean
+  /** Hide this column in mobile card view (e.g. action buttons rendered separately) */
+  mobileHidden?: boolean
 }
 
 export interface DataTablePagination {
@@ -116,6 +118,7 @@ export function DataTable<T>({
 
   const colMap = Object.fromEntries(columns.map(c => [c.key, c]))
   const visibleKeys = order.filter(k => !hidden.has(k))
+  const activeKeys = showColumnFilter ? visibleKeys : columns.map(c => c.key)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -167,6 +170,37 @@ export function DataTable<T>({
     ? sorted.slice(pagination.page * pagination.pageSize, (pagination.page + 1) * pagination.pageSize)
     : sorted
 
+  const pagination$ = pagination && totalPages > 1 ? (
+    <div className="flex items-center justify-between pt-2 border-t border-border">
+      <span className="text-xs text-muted-foreground tabular-nums">
+        עמוד {pagination.page + 1} מתוך {totalPages}
+        <span className="text-muted-foreground/60 mr-1">({pagination.total} שורות)</span>
+      </span>
+      <div className="flex items-center gap-1">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => pagination.onPageChange(pagination.page - 1)}
+          disabled={pagination.page === 0}
+          className="h-7 w-7 p-0"
+          aria-label="עמוד קודם"
+        >
+          <ChevronRight className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => pagination.onPageChange(pagination.page + 1)}
+          disabled={pagination.page >= totalPages - 1}
+          className="h-7 w-7 p-0"
+          aria-label="עמוד הבא"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </div>
+  ) : null
+
   return (
     <div className="space-y-3">
       {showColumnFilter && (
@@ -211,11 +245,44 @@ export function DataTable<T>({
         </div>
       )}
 
-      <div className="overflow-x-auto">
+      {/* ── Mobile card view ──────────────────────────────────────────── */}
+      <div className="md:hidden space-y-2">
+        {pageData.length === 0 ? (
+          <p className="py-10 text-center text-sm text-muted-foreground">{emptyMessage}</p>
+        ) : (
+          pageData.map(row => (
+            <div
+              key={rowKey(row)}
+              className={cn(
+                'rounded-lg border border-border bg-card p-3 space-y-2',
+                rowClassName?.(row)
+              )}
+            >
+              {activeKeys.map(key => {
+                const col = colMap[key]
+                if (!col || col.mobileHidden) return null
+                const value = col.cell(row)
+                return (
+                  <div key={key} className="flex items-start justify-between gap-3 text-sm">
+                    {col.header ? (
+                      <span className="text-muted-foreground shrink-0 leading-5">{col.header}</span>
+                    ) : null}
+                    <div className={cn('text-right flex-1 leading-5', col.className)}>{value}</div>
+                  </div>
+                )
+              })}
+            </div>
+          ))
+        )}
+        {pagination$}
+      </div>
+
+      {/* ── Desktop table view ───────────────────────────────────────── */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-right border-b border-border">
-              {(showColumnFilter ? visibleKeys : columns.map(c => c.key)).map(key => {
+              {activeKeys.map(key => {
                 const col = colMap[key]
                 if (!col) return null
                 const canSort = showColumnFilter && !!col.sortValue
@@ -242,7 +309,7 @@ export function DataTable<T>({
             {pageData.length === 0 ? (
               <tr>
                 <td
-                  colSpan={showColumnFilter ? visibleKeys.length : columns.length}
+                  colSpan={activeKeys.length}
                   className="py-10 text-center text-sm text-muted-foreground"
                 >
                   {emptyMessage}
@@ -257,7 +324,7 @@ export function DataTable<T>({
                     rowClassName?.(row)
                   )}
                 >
-                  {(showColumnFilter ? visibleKeys : columns.map(c => c.key)).map(key => {
+                  {activeKeys.map(key => {
                     const col = colMap[key]
                     if (!col) return null
                     return (
@@ -277,38 +344,8 @@ export function DataTable<T>({
             </tfoot>
           )}
         </table>
+        {pagination$}
       </div>
-
-      {pagination && totalPages > 1 && (
-        <div className="flex items-center justify-between pt-2 border-t border-border">
-          <span className="text-xs text-muted-foreground tabular-nums">
-            עמוד {pagination.page + 1} מתוך {totalPages}
-            <span className="text-muted-foreground/60 mr-1">({pagination.total} שורות)</span>
-          </span>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => pagination.onPageChange(pagination.page - 1)}
-              disabled={pagination.page === 0}
-              className="h-7 w-7 p-0"
-              aria-label="עמוד קודם"
-            >
-              <ChevronRight className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => pagination.onPageChange(pagination.page + 1)}
-              disabled={pagination.page >= totalPages - 1}
-              className="h-7 w-7 p-0"
-              aria-label="עמוד הבא"
-            >
-              <ChevronLeft className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

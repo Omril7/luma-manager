@@ -48,31 +48,34 @@ function CalendarToolbar({ label, onNavigate, onView, view }: ToolbarProps<RBCEv
       : 'text-muted-foreground hover:text-foreground',
   )
 
-  return (
-    <div className="flex items-center justify-between mb-3" dir="rtl">
-      {/* Right: today button */}
-      <button type="button" onClick={() => onNavigate('TODAY')} className={pillBtn(false)}>
-        היום
-      </button>
+  const viewSwitcher = (
+    <div className="inline-flex rounded-lg border border-border bg-muted p-0.5 gap-0.5">
+      {(['month', 'week', 'day'] as const).map(v => (
+        <button key={v} type="button" onClick={() => onView(v)} className={pillBtn(view === v)}>
+          {VIEW_LABELS[v]}
+        </button>
+      ))}
+    </div>
+  )
 
-      {/* Center: prev ‹ label › next */}
-      <div className="flex items-center gap-1">
+  return (
+    <div className="flex flex-col gap-2 mb-3" dir="rtl">
+      {/* Row 1: today + view switcher */}
+      <div className="flex items-center justify-between">
+        <button type="button" onClick={() => onNavigate('TODAY')} className={pillBtn(false)}>
+          היום
+        </button>
+        {viewSwitcher}
+      </div>
+      {/* Row 2 (mobile) / inline (desktop): nav */}
+      <div className="flex items-center justify-center gap-1">
         <button type="button" onClick={() => onNavigate('PREV')} className={pillBtn(false)} aria-label="הקודם">
           <ChevronRight className="h-4 w-4" />
         </button>
-        <span className="text-base font-semibold text-foreground min-w-36 text-center">{label}</span>
+        <span className="text-base font-semibold text-foreground w-40 sm:w-48 text-center">{label}</span>
         <button type="button" onClick={() => onNavigate('NEXT')} className={pillBtn(false)} aria-label="הבא">
           <ChevronLeft className="h-4 w-4" />
         </button>
-      </div>
-
-      {/* Left: view switcher */}
-      <div className="inline-flex rounded-lg border border-border bg-muted p-0.5 gap-0.5">
-        {(['month', 'week', 'day'] as const).map(v => (
-          <button key={v} type="button" onClick={() => onView(v)} className={pillBtn(view === v)}>
-            {VIEW_LABELS[v]}
-          </button>
-        ))}
       </div>
     </div>
   )
@@ -131,7 +134,7 @@ export default function CalendarClient({ events }: Props) {
         </button>
       </div>
 
-      <div className="bg-card rounded-xl border border-border p-4" style={{ height: 680 }}>
+      <div className="bg-card rounded-xl border border-border p-4 h-[480px] sm:h-[560px] md:h-[680px]">
         <Calendar
           localizer={localizer}
           culture="he"

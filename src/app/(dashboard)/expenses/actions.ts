@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { installmentVat } from '@/lib/vat'
-import { uploadFile } from '@/lib/cloudinary'
+import { uploadFile, deleteFile } from '@/lib/cloudinary'
 
 // ─── Categories ───────────────────────────────────────────────────────────────
 
@@ -266,12 +266,25 @@ export async function deleteExpense(expenseId: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'לא מחובר' }
 
+  // Fetch receipts before deleting so we can remove them from Cloudinary
+  const { data: receipts } = await supabase
+    .from('receipts')
+    .select('cloudinary_public_id')
+    .eq('expense_id', expenseId)
+    .eq('user_id', user.id)
+
   const { error } = await supabase
     .from('expenses')
     .delete()
     .eq('id', expenseId)
     .eq('user_id', user.id)
   if (error) return { error: error.message }
+
+  // Clean up Cloudinary files (best-effort, don't fail the delete if this errors)
+  if (receipts) {
+    await Promise.allSettled(receipts.map(r => deleteFile(r.cloudinary_public_id)))
+  }
+
   revalidatePath('/expenses')
   return { success: true }
 }

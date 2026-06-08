@@ -79,7 +79,7 @@ export function Sidebar() {
                 <img src="/logo.png" alt="לוגו" className="h-full w-full object-contain p-1" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-sm font-bold text-white leading-tight truncate">מנהל כספים</h1>
+                <h1 className="text-sm font-bold text-white leading-tight truncate">LUMA</h1>
                 <p className="text-xs text-slate-400">עסקי</p>
               </div>
             </div>
@@ -93,10 +93,15 @@ export function Sidebar() {
 
       {/* Mobile topbar */}
       <div className="md:hidden fixed top-0 right-0 left-0 z-40 flex items-center justify-between px-4 h-14 sidebar-skeu border-b border-white/10">
-        <h1 className="text-sm font-bold text-white">מנהל כספים</h1>
-        <button onClick={() => setOpen(v => !v)} className="p-2 text-slate-300 hover:text-white transition-colors rounded-lg hover:bg-white/10">
-          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
+        <h1 className="text-sm font-bold text-white">LUMA</h1>
+        <div className="flex items-center gap-1">
+          <div className="text-slate-300 [&_button]:text-slate-300 [&_button:hover]:text-white [&_button:hover]:bg-white/10">
+            <ThemeToggle />
+          </div>
+          <button onClick={() => setOpen(v => !v)} className="p-2 text-slate-300 hover:text-white transition-colors rounded-lg hover:bg-white/10">
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile drawer */}
