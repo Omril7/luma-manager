@@ -93,7 +93,10 @@ export async function approveMonthClose(
       const [settingsRes, incomeRes, installmentsRes, authorityRes] = await Promise.all([
         supabase.from('settings').select('accountant_email, business_name, paycheck_percent').eq('user_id', user.id).single(),
         supabase.from('income').select('final_price').eq('user_id', user.id).like('income_date', `${monthKey}%`),
-        supabase.from('expense_installments').select('amount').eq('user_id', user.id).like('due_month', `${monthKey}%`),
+        supabase.from('expense_installments')
+          .select('amount, expenses!inner(receipts(id, cloudinary_url, file_type))')
+          .eq('user_id', user.id)
+          .like('due_month', `${monthKey}%`),
         supabase.from('authority_payments').select('type, amount').eq('user_id', user.id).like('payment_month', `${monthKey}%`),
       ])
 
@@ -103,11 +106,31 @@ export async function approveMonthClose(
         const paycheckPct = settingsRes.data?.paycheck_percent ?? 30
 
         const totalIncome = (incomeRes.data ?? []).reduce((s, r) => s + r.final_price, 0)
-        const totalExpenses = (installmentsRes.data ?? []).reduce((s, r) => s + r.amount, 0)
+
+        type InstallmentRow = { amount: number; expenses: { receipts: { id: string; cloudinary_url: string; file_type: string | null }[] } }
+        const installments = (installmentsRes.data ?? []) as unknown as InstallmentRow[]
+        const totalExpenses = installments.reduce((s, r) => s + r.amount, 0)
         const grossProfit = totalIncome - totalExpenses
         const salary = grossProfit * (paycheckPct / 100)
         const authorityPayments = authorityRes.data ?? []
         const authorityTotal = authorityPayments.reduce((s, r) => s + r.amount, 0)
+
+        // Download receipts for attachment
+        const allReceipts = installments.flatMap(r => r.expenses.receipts)
+        const attachments: { filename: string; content: Buffer; contentType: string }[] = []
+        for (const receipt of allReceipts) {
+          try {
+            const res = await fetch(receipt.cloudinary_url)
+            if (!res.ok) continue
+            const buf = Buffer.from(await res.arrayBuffer())
+            const ext = receipt.file_type === 'pdf' ? 'pdf' : 'jpg'
+            attachments.push({
+              filename: `receipt-${receipt.id}.${ext}`,
+              content: buf,
+              contentType: receipt.file_type === 'pdf' ? 'application/pdf' : 'image/jpeg',
+            })
+          } catch { /* skip failed downloads */ }
+        }
 
         const TYPE_LABELS: Record<string, string> = {
           income_tax: 'מס הכנסה',
@@ -115,51 +138,93 @@ export async function approveMonthClose(
           vat: 'מע"מ',
         }
 
+        const TD = 'padding:10px 14px;border-bottom:1px solid #e5e7eb;font-size:15px;direction:rtl'
+        const TH = 'padding:10px 14px;background:#f3f4f6;font-weight:600;text-align:right;font-size:14px;color:#374151'
+
         const authorityRows = authorityPayments.map(p =>
-          `<tr><td style="padding:6px 8px;border-bottom:1px solid #eee">${TYPE_LABELS[p.type] ?? p.type}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:left">${ils(p.amount)}</td></tr>`
+          `<tr>
+            <td style="${TD}">${TYPE_LABELS[p.type] ?? p.type}</td>
+            <td style="${TD};font-weight:600;color:#111">${ils(p.amount)}</td>
+          </tr>`
         ).join('')
 
         const label = `${MONTH_NAMES_HE[month - 1]} ${year}`
 
+        const row = (label: string, value: string, highlight = false) =>
+          `<tr>
+            <td style="padding:11px 16px;color:#6b7280;font-size:15px;direction:rtl;border-bottom:1px solid #f0f0f0">${label}</td>
+            <td style="padding:11px 16px;font-weight:600;font-size:15px;direction:rtl;border-bottom:1px solid #f0f0f0;${highlight ? 'color:#059669' : 'color:#111'}">${value}</td>
+          </tr>`
+
         const html = `<!DOCTYPE html>
 <html dir="rtl" lang="he">
-<head><meta charset="UTF-8"><style>
-  body{font-family:Arial,sans-serif;direction:rtl;color:#111;padding:24px;max-width:600px;margin:0 auto}
-  h1{color:#1e40af;margin-bottom:4px}
-  .subtitle{color:#6b7280;margin-top:0}
-  h2{color:#374151;border-bottom:2px solid #e5e7eb;padding-bottom:6px;margin-top:28px}
-  table{width:100%;border-collapse:collapse;margin-bottom:16px}
-  th{background:#f3f4f6;padding:8px;text-align:right;font-weight:600}
-  td{padding:6px 8px}
-  .summary-table td:first-child{color:#6b7280}
-  .summary-table td:last-child{font-weight:600;text-align:left}
-  .total-row td{font-weight:700;font-size:1.05em;border-top:2px solid #d1d5db;padding-top:10px}
-  .positive{color:#059669}
-  .muted{color:#6b7280;font-size:0.9em}
-</style></head>
-<body>
-  <h1>סיכום חודשי — ${label}${businessName ? ` | ${businessName}` : ''}</h1>
-  <p class="subtitle">החודש נסגר ואושר</p>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>סיכום חודשי — ${label}</title>
+</head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,Helvetica,sans-serif;direction:rtl">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08)">
 
-  <h2>תזרים מזומנים</h2>
-  <table class="summary-table">
-    <tr><td>יתרה פתיחה</td><td>${ils(openingBalance)}</td></tr>
-    <tr><td>סה"כ הכנסות</td><td class="positive">${ils(totalIncome)}</td></tr>
-    <tr><td>סה"כ הוצאות עסקיות</td><td>${ils(totalExpenses)}</td></tr>
-    <tr><td>רווח גולמי</td><td>${ils(grossProfit)}</td></tr>
-    <tr><td>משכורת (${paycheckPct}%)</td><td>${ils(salary)}</td></tr>
-    ${authorityTotal > 0 ? `<tr><td>תשלומי רשויות</td><td>${ils(authorityTotal)}</td></tr>` : ''}
-    <tr class="total-row"><td>יתרה סגירה</td><td>${ils(closingBalance)}</td></tr>
+        <!-- Header -->
+        <tr><td style="background:#1e3a5f;padding:28px 32px;direction:rtl">
+          <p style="margin:0;font-size:13px;color:#93c5fd;font-weight:500;letter-spacing:0.5px">סיכום חודשי</p>
+          <h1 style="margin:6px 0 2px;font-size:22px;color:#ffffff;font-weight:700">${label}${businessName ? ` — ${businessName}` : ''}</h1>
+          <p style="margin:0;font-size:13px;color:#93c5fd">החודש נסגר ואושר ✓</p>
+        </td></tr>
+
+        <!-- Cash flow -->
+        <tr><td style="padding:24px 32px 8px;direction:rtl">
+          <h2 style="margin:0 0 12px;font-size:15px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.4px;border-bottom:2px solid #e5e7eb;padding-bottom:8px">תזרים מזומנים</h2>
+        </td></tr>
+        <tr><td style="padding:0 16px 8px;direction:rtl">
+          <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:8px;overflow:hidden;border:1px solid #e5e7eb">
+            ${row('יתרה פתיחה', ils(openingBalance))}
+            ${row('סה"כ הכנסות', ils(totalIncome), true)}
+            ${row('סה"כ הוצאות עסקיות', ils(totalExpenses))}
+            ${row('רווח גולמי', ils(grossProfit))}
+            ${row(`משכורת (${paycheckPct}%)`, ils(salary))}
+            ${authorityTotal > 0 ? row('תשלומי רשויות', ils(authorityTotal)) : ''}
+            <tr>
+              <td style="padding:14px 16px;color:#111;font-size:16px;font-weight:700;direction:rtl;background:#f9fafb">יתרה סגירה</td>
+              <td style="padding:14px 16px;font-size:16px;font-weight:700;color:#1e3a5f;direction:rtl;background:#f9fafb">${ils(closingBalance)}</td>
+            </tr>
+          </table>
+        </td></tr>
+
+        <!-- Authority payments -->
+        ${authorityPayments.length > 0 ? `
+        <tr><td style="padding:24px 32px 8px;direction:rtl">
+          <h2 style="margin:0 0 12px;font-size:15px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.4px;border-bottom:2px solid #e5e7eb;padding-bottom:8px">תשלומי רשויות</h2>
+        </td></tr>
+        <tr><td style="padding:0 16px 8px;direction:rtl">
+          <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:8px;overflow:hidden;border:1px solid #e5e7eb">
+            <thead><tr>
+              <th style="${TH}">סוג</th>
+              <th style="${TH}">סכום</th>
+            </tr></thead>
+            <tbody>${authorityRows}</tbody>
+          </table>
+        </td></tr>` : ''}
+
+        <!-- Receipts note -->
+        ${attachments.length > 0 ? `
+        <tr><td style="padding:16px 32px 8px;direction:rtl">
+          <p style="margin:0;font-size:13px;color:#6b7280;background:#f9fafb;border-radius:8px;padding:12px 16px;border:1px solid #e5e7eb">
+            📎 מצורפות ${attachments.length} קבלות לחודש ${label}
+          </p>
+        </td></tr>` : ''}
+
+        <!-- Footer -->
+        <tr><td style="padding:20px 32px 28px;direction:rtl">
+          <p style="margin:0;font-size:12px;color:#9ca3af">נשלח אוטומטית בעת סגירת חודש ${label}.</p>
+        </td></tr>
+
+      </table>
+    </td></tr>
   </table>
-
-  ${authorityPayments.length > 0 ? `
-  <h2>תשלומי רשויות</h2>
-  <table>
-    <thead><tr><th>סוג</th><th>סכום</th></tr></thead>
-    <tbody>${authorityRows}</tbody>
-  </table>` : ''}
-
-  <p class="muted">נשלח אוטומטית בעת סגירת חודש ${label}.</p>
 </body>
 </html>`
 
@@ -167,6 +232,7 @@ export async function approveMonthClose(
           to: accountantEmail,
           subject: `סיכום חודשי — ${label}${businessName ? ` | ${businessName}` : ''}`,
           html,
+          attachments,
         })
       }
     }
