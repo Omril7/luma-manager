@@ -142,8 +142,14 @@ export default function DashboardClient({
     if (!confirmClose) return
     startTransition(async () => {
       const res = await approveMonthClose(confirmClose.month, confirmClose.opening, confirmClose.closing)
-      if (res && 'error' in res && res.error) toast.error(res.error)
-      else toast.success('החודש נסגר בהצלחה')
+      if (res && 'error' in res && res.error) {
+        toast.error(res.error)
+      } else {
+        toast.success('החודש נסגר בהצלחה')
+        if (res && 'emailWarning' in res && res.emailWarning) {
+          toast.warning(`המייל לרואה החשבון לא נשלח: ${res.emailWarning}`)
+        }
+      }
       setConfirmClose(null)
     })
   }
