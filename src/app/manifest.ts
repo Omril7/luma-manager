@@ -2,8 +2,8 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'מנהל כספים עסקי',
-    short_name: 'לומא',
+    name: 'Luma Manager',
+    short_name: 'Luma',
     description: 'ניהול הוצאות, הכנסות ותזרים מזומנים לעסק',
     start_url: '/dashboard',
     display: 'standalone',

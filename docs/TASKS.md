@@ -16,7 +16,7 @@ Manual tasks that require dashboard access, credentials, or external services.
   ```
 - [x] Run the DB migration: `npx supabase db push`
 
-### Enable Passkeys
+### Enable Passkeys - Eden only can do it (Owner Role)
 - [ ] Go to **Authentication → Passkeys** in the Supabase Dashboard
 - [ ] Set **Relying Party Display Name**: `מנהל כספים` (or your business name)
 - [ ] Set **Relying Party ID**: `localhost` (for dev) / `luma-manager.vercel.app` (for prod)
@@ -24,14 +24,14 @@ Manual tasks that require dashboard access, credentials, or external services.
 
 ---
 
-## Cloudinary - Omri's account
-- [x] Keys added to `.env.local` ✓
+## Cloudinary - Omri's account - move to Eden's account
+- [ ] Keys added to `.env.local` ✓
 
 ---
 
-## Gmail (for summary email) - Omri's account
-- [x] `GMAIL_USER` added to `.env.local` ✓
-- [x] `GMAIL_APP_PASSWORD` added to `.env.local` ✓
+## Gmail (for summary email) - Omri's account - move to Eden's account
+- [ ] `GMAIL_USER` added to `.env.local` ✓
+- [ ] `GMAIL_APP_PASSWORD` added to `.env.local` ✓
 
 ---
 
@@ -40,5 +40,5 @@ Manual tasks that require dashboard access, credentials, or external services.
 
 ---
 
-## Deployment
+## Deployment - Omri's account - move to Eden's account
 - [ ] Deploy to Vercel under Omri's account at https://luma-manager.vercel.app

@@ -11,13 +11,13 @@ const heebo = Heebo({
 })
 
 export const metadata: Metadata = {
-  title: 'LUMA',
+  title: 'Luma Manager',
   description: 'ניהול הוצאות, הכנסות ותזרים מזומנים לעסק',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'LUMA',
+    title: 'Luma Manager',
   },
   icons: {
     apple: '/icons/icon-180x180.png',
