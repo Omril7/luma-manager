@@ -13,6 +13,16 @@ const heebo = Heebo({
 export const metadata: Metadata = {
   title: 'מנהל כספים עסקי',
   description: 'ניהול הוצאות, הכנסות ותזרים מזומנים לעסק',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'לומא',
+  },
+  icons: {
+    apple: '/icons/icon-180x180.png',
+    icon: '/icons/icon-192x192.png',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -20,6 +30,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="he" dir="rtl" suppressHydrationWarning className={heebo.variable}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}})()` }} />
+        <meta name="theme-color" content="#3b1a08" />
+        <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body className="antialiased font-sans">
         {children}
