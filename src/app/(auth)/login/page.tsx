@@ -35,7 +35,7 @@ export default function LoginPage() {
     const supabase = createClient()
     const { error } = await supabase.auth.signInWithPassword({
       email: data.email.trim(),
-      password: data.password,
+      password: data.password.trim(),
     })
     if (error) {
       toast.error('שגיאה בכניסה: ' + error.message)

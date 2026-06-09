@@ -37,7 +37,7 @@ export default function RegisterPage() {
     const supabase = createClient()
     const { error } = await supabase.auth.signUp({
       email: data.email.trim(),
-      password: data.password,
+      password: data.password.trim(),
     })
     if (error) {
       toast.error('שגיאה בהרשמה: ' + error.message)
