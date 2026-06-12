@@ -131,7 +131,7 @@ export function DatePicker({
           aria-label={placeholder}
           className={cn(
             'flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm',
-            'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+            'focus:outline-none focus:border-ring focus:ring-1 focus:ring-ring/40',
             'disabled:cursor-not-allowed disabled:opacity-50',
             'field-skeu',
             !value && 'text-muted-foreground',
@@ -191,7 +191,7 @@ export function DatePicker({
                     onClick={() => selectYear(year)}
                     className={cn(
                       'h-9 rounded-lg text-sm font-medium transition-all duration-100',
-                      'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1',
+                      'focus:outline-none focus:ring-1 focus:ring-ring/40',
                       year === viewYear
                         ? 'bg-primary text-primary-foreground shadow-[0_1px_0_rgba(255,255,255,0.15)_inset,0_2px_4px_rgba(0,0,0,0.2)]'
                         : 'hover:bg-accent/15 text-foreground',
@@ -242,7 +242,7 @@ export function DatePicker({
                     onClick={() => selectMonth(idx)}
                     className={cn(
                       'h-9 rounded-lg text-sm font-medium transition-all duration-100',
-                      'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1',
+                      'focus:outline-none focus:ring-1 focus:ring-ring/40',
                       idx === viewMonth && viewYear === getYear(viewDate)
                         ? 'bg-primary text-primary-foreground shadow-[0_1px_0_rgba(255,255,255,0.15)_inset,0_2px_4px_rgba(0,0,0,0.2)]'
                         : 'hover:bg-accent/15 text-foreground',
@@ -314,7 +314,7 @@ export function DatePicker({
                       onClick={() => selectDay(d)}
                       className={cn(
                         'h-8 w-full rounded-lg text-sm font-medium transition-all duration-100',
-                        'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1',
+                        'focus:outline-none focus:ring-1 focus:ring-ring/40',
                         outside && 'opacity-30',
                         disabled_ && 'cursor-not-allowed opacity-30',
                         selected && 'bg-primary text-primary-foreground shadow-[0_1px_0_rgba(255,255,255,0.15)_inset,0_2px_4px_rgba(0,0,0,0.2)]',

@@ -21,7 +21,7 @@ const SelectTrigger = React.forwardRef<
          pr-9 reserves space so value text does not overlap the icon.
          text-right aligns the selected value toward the right edge. */
       'relative flex h-10 w-full items-center rounded-md border pr-9 pl-3 py-2 text-sm text-right',
-      'placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+      'placeholder:text-muted-foreground focus:outline-none focus:border-ring focus:ring-1 focus:ring-ring/40',
       'disabled:cursor-not-allowed disabled:opacity-50 field-skeu',
       className
     )}

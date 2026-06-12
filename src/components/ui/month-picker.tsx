@@ -127,7 +127,7 @@ export function MonthPicker({
               onClick={() => selectMonth(m)}
               className={cn(
                 'h-9 rounded-lg text-sm font-medium transition-all duration-100',
-                'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1',
+                'focus:outline-none focus:ring-1 focus:ring-ring/40',
                 selected && 'bg-primary text-primary-foreground shadow-[0_1px_0_rgba(255,255,255,0.15)_inset,0_2px_4px_rgba(0,0,0,0.2)]',
                 !selected && current && 'bg-accent/20 text-accent-foreground font-bold ring-1 ring-accent/50',
                 !selected && 'hover:bg-accent/15 hover:text-foreground text-foreground',
@@ -192,7 +192,7 @@ export function MonthPicker({
               onClick={() => selectYear(y)}
               className={cn(
                 'h-9 rounded-lg text-sm font-medium transition-all duration-100',
-                'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1',
+                'focus:outline-none focus:ring-1 focus:ring-ring/40',
                 isSelected && 'bg-primary text-primary-foreground shadow-[0_1px_0_rgba(255,255,255,0.15)_inset,0_2px_4px_rgba(0,0,0,0.2)]',
                 !isSelected && isCurrent && 'bg-accent/20 text-accent-foreground font-bold ring-1 ring-accent/50',
                 !isSelected && 'hover:bg-accent/15 hover:text-foreground text-foreground',
@@ -231,7 +231,7 @@ export function MonthPicker({
             aria-label={placeholder}
             className={cn(
               'flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm',
-              'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+              'focus:outline-none focus:border-ring focus:ring-1 focus:ring-ring/40',
               'disabled:cursor-not-allowed disabled:opacity-50',
               'field-skeu',
               !value && 'text-muted-foreground',

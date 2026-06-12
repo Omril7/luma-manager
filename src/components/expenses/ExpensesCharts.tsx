@@ -4,6 +4,7 @@ import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from 'recharts'
+import { formatILS } from '@/lib/utils'
 
 type Installment = {
   amount: number
@@ -28,10 +29,6 @@ const COLORS = [
 
 const MONTH_NAMES = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר']
 
-function fmt(n: number) {
-  return `₪${n.toLocaleString('he-IL', { maximumFractionDigits: 0 })}`
-}
-
 const tooltipStyle: React.CSSProperties = {
   background: 'hsl(var(--card))',
   border: '1px solid hsl(var(--border))',
@@ -54,13 +51,13 @@ export default function ExpensesCharts({ installments, isAnnual, year, month }: 
         .filter(inst => inst.due_month.slice(0, 7) === key)
         .reduce((sum, inst) => sum + inst.amount, 0)
       return { name: MONTH_NAMES[i], total }
-    })
+    }).reverse()
 
     return (
       <div className="bg-card rounded-xl border border-border p-5">
         <h3 className="text-sm font-medium text-muted-foreground mb-4">הוצאות לפי חודש — {year}</h3>
         <ResponsiveContainer width="100%" height={260}>
-          <BarChart data={data} margin={{ top: 8, right: 4, left: 0, bottom: 4 }}>
+          <BarChart data={data} margin={{ top: 22, right: 8, left: 4, bottom: 4 }} style={{ overflow: 'visible' }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
             <XAxis
               dataKey="name"
@@ -69,15 +66,15 @@ export default function ExpensesCharts({ installments, isAnnual, year, month }: 
               tickLine={false}
             />
             <YAxis
-              mirror={true}
+              orientation="right"
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-              tickFormatter={v => `₪${Number(v).toLocaleString('he-IL', { maximumFractionDigits: 0 })}`}
-              width={1}
+              tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))', dx: 30 }}
+              tickFormatter={v => formatILS(Number(v))}
+              width={62}
             />
             <Tooltip
-              formatter={(v) => [fmt(Number(v)), 'הוצאות']}
+              formatter={(v) => [formatILS(Number(v)), 'הוצאות']}
               contentStyle={tooltipStyle}
               labelStyle={{ color: 'hsl(var(--muted-foreground))', marginBottom: 2, fontWeight: 500 }}
               itemStyle={{ color: 'hsl(var(--foreground))', fontWeight: 700 }}
@@ -125,7 +122,7 @@ export default function ExpensesCharts({ installments, isAnnual, year, month }: 
                 <span className="text-xs text-muted-foreground tabular-nums">
                   {((entry.value / total) * 100).toFixed(0)}%
                 </span>
-                <span className="font-semibold text-foreground tabular-nums">{fmt(entry.value)}</span>
+                <span className="font-semibold text-foreground tabular-nums">{formatILS(entry.value)}</span>
               </div>
             </div>
           ))}
@@ -150,7 +147,7 @@ export default function ExpensesCharts({ installments, isAnnual, year, month }: 
                 ))}
               </Pie>
               <Tooltip
-                formatter={(v) => [fmt(Number(v))]}
+                formatter={(v) => [formatILS(Number(v))]}
                 contentStyle={tooltipStyle}
                 itemStyle={{ color: 'hsl(var(--foreground))', fontWeight: 700 }}
                 labelStyle={{ color: 'hsl(var(--muted-foreground))' }}

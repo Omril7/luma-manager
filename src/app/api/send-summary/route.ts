@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { sendSummaryEmail } from '@/lib/email'
+import { formatILS } from '@/lib/utils'
 
 const MONTH_NAMES_HE = [
   'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
   'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר',
 ]
-
-function fmt(n: number) {
-  return n.toLocaleString('he-IL', { style: 'currency', currency: 'ILS', maximumFractionDigits: 2 })
-}
 
 function monthLabel(year: number, month: number) {
   return `${MONTH_NAMES_HE[month - 1]} ${year}`
@@ -173,13 +170,13 @@ export async function POST(req: NextRequest) {
             <td dir="rtl" style="${TD}">${new Date(r.expenses.transaction_date).toLocaleDateString('he-IL')}</td>
             <td dir="rtl" style="${TD}">${r.expenses.description}</td>
             <td dir="rtl" style="${TD}">${r.expenses.expense_categories?.name ?? '—'}</td>
-            <td dir="rtl" style="${TD_NUM}">${fmt(r.amount)}</td>
-            <td dir="rtl" style="${TD_NUM}">${r.vat_amount > 0 ? fmt(r.vat_amount) : '—'}</td>
+            <td dir="rtl" style="${TD_NUM}">${formatILS(r.amount, 2)}</td>
+            <td dir="rtl" style="${TD_NUM}">${r.vat_amount > 0 ? formatILS(r.vat_amount, 2) : '—'}</td>
           </tr>`).join('')}
           <tr dir="rtl">
             <td dir="rtl" colspan="3" style="${TD_FOOT}">סה&quot;כ</td>
-            <td dir="rtl" style="${TD_FOOT}">${fmt(totalVatRecognized)}</td>
-            <td dir="rtl" style="${TD_FOOT}">מע&quot;מ מוכר: ${fmt(totalVat)}</td>
+            <td dir="rtl" style="${TD_FOOT}">${formatILS(totalVatRecognized, 2)}</td>
+            <td dir="rtl" style="${TD_FOOT}">מע&quot;מ מוכר: ${formatILS(totalVat, 2)}</td>
           </tr>
         </tbody>
       </table>` : `<p dir="rtl" style="${FONT}color:#6b7280;font-size:14px;margin:0 0 24px;direction:rtl;text-align:right;">אין הוצאות עסקיות מוכרות מע&quot;מ לחודש זה.</p>`}
@@ -201,11 +198,11 @@ export async function POST(req: NextRequest) {
           <tr dir="rtl">
             <td dir="rtl" style="${TD}">${new Date(r.expenses.transaction_date).toLocaleDateString('he-IL')}</td>
             <td dir="rtl" style="${TD}">${r.expenses.description}</td>
-            <td dir="rtl" style="${TD_NUM}">${fmt(r.amount)}</td>
+            <td dir="rtl" style="${TD_NUM}">${formatILS(r.amount, 2)}</td>
           </tr>`).join('')}
           <tr dir="rtl">
             <td dir="rtl" colspan="2" style="${TD_FOOT_PERSONAL}">סה&quot;כ</td>
-            <td dir="rtl" style="${TD_FOOT_PERSONAL}">${fmt(totalPersonal)}</td>
+            <td dir="rtl" style="${TD_FOOT_PERSONAL}">${formatILS(totalPersonal, 2)}</td>
           </tr>
         </tbody>
       </table>` : `<p dir="rtl" style="${FONT}color:#6b7280;font-size:14px;margin:0;direction:rtl;text-align:right;">אין הוצאות אישיות לחודש זה.</p>`}

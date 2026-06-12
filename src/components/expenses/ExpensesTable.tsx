@@ -5,6 +5,7 @@ import { deleteExpense } from '@/app/(dashboard)/expenses/actions'
 import { toast } from 'sonner'
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table'
 import { Button } from '@/components/ui/button'
+import { formatILS } from '@/lib/utils'
 import { FileText, Image } from 'lucide-react'
 
 type Receipt = {
@@ -40,10 +41,6 @@ type Props = {
   expenses: Expense[]
   filterMonth: string
   onEdit: (expense: Expense) => void
-}
-
-function fmt(n: number) {
-  return n.toLocaleString('he-IL', { style: 'currency', currency: 'ILS', maximumFractionDigits: 2 })
 }
 
 // Flattened row for the table
@@ -108,13 +105,13 @@ export default function ExpensesTable({ expenses, filterMonth, onEdit }: Props) 
       key: '_installmentAmt',
       header: 'סכום',
       sortValue: r => r._installmentAmt,
-      cell: r => <span className="font-medium">{fmt(r._installmentAmt)}</span>,
+      cell: r => <span className="font-medium">{formatILS(r._installmentAmt, 2)}</span>,
     },
     {
       key: '_vatAmt',
       header: 'מע"מ',
       sortValue: r => r._vatAmt,
-      cell: r => <span className="text-muted-foreground">{r._vatAmt > 0 ? fmt(r._vatAmt) : '—'}</span>,
+      cell: r => <span className="text-muted-foreground">{r._vatAmt > 0 ? formatILS(r._vatAmt, 2) : '—'}</span>,
     },
     {
       key: 'installments',

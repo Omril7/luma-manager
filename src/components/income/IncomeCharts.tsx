@@ -3,6 +3,7 @@
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
+import { formatILS } from '@/lib/utils'
 
 type IncomeRow = {
   income_date: string
@@ -19,10 +20,6 @@ type Props = {
 }
 
 const MONTH_NAMES = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר']
-
-function fmt(n: number) {
-  return `₪${n.toLocaleString('he-IL', { maximumFractionDigits: 0 })}`
-}
 
 const tooltipStyle: React.CSSProperties = {
   background: 'hsl(var(--card))',
@@ -42,13 +39,13 @@ export default function IncomeCharts({ rows, isAnnual, year, month }: Props) {
       const key = `${year}-${m}`
       const total = rows.filter(r => r.income_date.slice(0, 7) === key).reduce((s, r) => s + r.final_price, 0)
       return { name: MONTH_NAMES[i], total }
-    })
+    }).reverse()
 
     return (
       <div className="bg-card rounded-xl border border-border p-5">
         <h3 className="text-sm font-medium text-muted-foreground mb-4">הכנסות לפי חודש — {year}</h3>
         <ResponsiveContainer width="100%" height={240}>
-          <BarChart data={data} margin={{ top: 8, right: 4, left: 0, bottom: 4 }}>
+          <BarChart data={data} margin={{ top: 22, right: 8, left: 4, bottom: 4 }} style={{ overflow: 'visible' }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
             <XAxis
               dataKey="name"
@@ -57,15 +54,15 @@ export default function IncomeCharts({ rows, isAnnual, year, month }: Props) {
               tickLine={false}
             />
             <YAxis
-              mirror={true}
+              orientation="right"
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-              tickFormatter={v => `₪${Number(v).toLocaleString('he-IL', { maximumFractionDigits: 0 })}`}
-              width={1}
+              tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))', dx: 30 }}
+              tickFormatter={v => formatILS(Number(v))}
+              width={62}
             />
             <Tooltip
-              formatter={(v) => [fmt(Number(v)), 'הכנסות']}
+              formatter={(v) => [formatILS(Number(v)), 'הכנסות']}
               contentStyle={tooltipStyle}
               labelStyle={{ color: 'hsl(var(--muted-foreground))', marginBottom: 2, fontWeight: 500 }}
               itemStyle={{ color: 'hsl(var(--foreground))', fontWeight: 700 }}
@@ -92,13 +89,13 @@ export default function IncomeCharts({ rows, isAnnual, year, month }: Props) {
   const dailyData = Array.from({ length: daysInMonth }, (_, i) => {
     const day = String(i + 1).padStart(2, '0')
     return { name: String(i + 1), total: byDay[day] ?? 0 }
-  })
+  }).reverse()
 
   return (
     <div className="bg-card rounded-xl border border-border p-5">
       <h3 className="text-sm font-medium text-muted-foreground mb-4">הכנסות יומיות — {MONTH_NAMES[month - 1]}</h3>
       <ResponsiveContainer width="100%" height={240}>
-        <BarChart data={dailyData} margin={{ top: 8, right: 4, left: 0, bottom: 4 }}>
+        <BarChart data={dailyData} margin={{ top: 22, right: 8, left: 4, bottom: 4 }} style={{ overflow: 'visible' }}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
           <XAxis
             dataKey="name"
@@ -108,15 +105,15 @@ export default function IncomeCharts({ rows, isAnnual, year, month }: Props) {
             interval={4}
           />
           <YAxis
-            mirror={true}
+            orientation="right"
             axisLine={false}
             tickLine={false}
-            tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-            tickFormatter={v => `₪${Number(v).toLocaleString('he-IL', { maximumFractionDigits: 0 })}`}
-            width={1}
+            tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))', dx: 30 }}
+            tickFormatter={v => formatILS(Number(v))}
+            width={62}
           />
           <Tooltip
-            formatter={(v) => [fmt(Number(v)), 'הכנסה']}
+            formatter={(v) => [formatILS(Number(v)), 'הכנסה']}
             contentStyle={tooltipStyle}
             labelStyle={{ color: 'hsl(var(--muted-foreground))', marginBottom: 2, fontWeight: 500 }}
             itemStyle={{ color: 'hsl(var(--foreground))', fontWeight: 700 }}

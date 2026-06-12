@@ -148,7 +148,7 @@ export function DateTimePicker({
             disabled={disabled}
             className={cn(
               'flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm',
-              'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+              'focus:outline-none focus:border-ring focus:ring-1 focus:ring-ring/40',
               'disabled:cursor-not-allowed disabled:opacity-50 field-skeu',
               !localDate && 'text-muted-foreground',
               className,

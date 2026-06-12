@@ -7,11 +7,12 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatILS(amount: number): string {
+export function formatILS(amount: number, decimals = 0): string {
   return new Intl.NumberFormat('he-IL', {
     style: 'currency',
     currency: 'ILS',
-    minimumFractionDigits: 2,
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
   }).format(amount)
 }
 

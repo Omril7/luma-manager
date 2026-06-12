@@ -1,4 +1,5 @@
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table'
+import { formatILS } from '@/lib/utils'
 
 type IncomeRow = {
   product_name: string
@@ -18,10 +19,6 @@ type Props = {
   rows: IncomeRow[]
 }
 
-function fmt(n: number) {
-  return n.toLocaleString('he-IL', { style: 'currency', currency: 'ILS', maximumFractionDigits: 2 })
-}
-
 const columns: DataTableColumn<ProductStat>[] = [
   {
     key: 'name',
@@ -39,13 +36,13 @@ const columns: DataTableColumn<ProductStat>[] = [
     key: 'revenue',
     header: 'סה"כ הכנסה',
     sortValue: r => r.revenue,
-    cell: r => <span className="text-green-700 font-medium">{fmt(r.revenue)}</span>,
+    cell: r => <span className="text-green-700 font-medium">{formatILS(r.revenue, 2)}</span>,
   },
   {
     key: 'discountLoss',
     header: 'אובדן הנחות',
     sortValue: r => r.discountLoss,
-    cell: r => <span className="text-orange-600">{r.discountLoss > 0 ? fmt(r.discountLoss) : '—'}</span>,
+    cell: r => <span className="text-orange-600">{r.discountLoss > 0 ? formatILS(r.discountLoss, 2) : '—'}</span>,
   },
 ]
 

@@ -5,6 +5,7 @@ import { deleteIncome } from '@/app/(dashboard)/income/actions'
 import { toast } from 'sonner'
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table'
 import { Button } from '@/components/ui/button'
+import { formatILS } from '@/lib/utils'
 
 type IncomeRow = {
   id: string
@@ -24,10 +25,6 @@ type Props = {
   rows: IncomeRow[]
   filterMonth: string
   onEdit: (row: IncomeRow) => void
-}
-
-function fmt(n: number) {
-  return n.toLocaleString('he-IL', { style: 'currency', currency: 'ILS', maximumFractionDigits: 2 })
 }
 
 export default function IncomeTable({ rows, filterMonth, onEdit }: Props) {
@@ -67,26 +64,26 @@ export default function IncomeTable({ rows, filterMonth, onEdit }: Props) {
       key: 'original_price',
       header: 'מחיר מקורי',
       sortValue: r => r.original_price,
-      cell: r => fmt(r.original_price),
+      cell: r => formatILS(r.original_price, 2),
     },
     {
       key: 'discount_amount',
       header: 'הנחה',
       sortValue: r => r.discount_amount,
-      cell: r => <span className="text-orange-600">{r.discount_amount > 0 ? fmt(r.discount_amount) : '—'}</span>,
+      cell: r => <span className="text-orange-600">{r.discount_amount > 0 ? formatILS(r.discount_amount, 2) : '—'}</span>,
     },
     {
       key: 'final_price',
       header: 'מחיר סופי',
       sortValue: r => r.final_price,
-      cell: r => <span className="font-medium text-green-700">{fmt(r.final_price)}</span>,
+      cell: r => <span className="font-medium text-green-700">{formatILS(r.final_price, 2)}</span>,
     },
     {
       key: 'delivery_amount',
       header: 'משלוח',
       sortValue: r => r.delivery_amount,
       cell: r => r.delivery_amount > 0
-        ? <span className="text-blue-600 dark:text-blue-400">{fmt(r.delivery_amount)}</span>
+        ? <span className="text-blue-600 dark:text-blue-400">{formatILS(r.delivery_amount, 2)}</span>
         : <span className="text-muted-foreground/50">—</span>,
     },
     {
