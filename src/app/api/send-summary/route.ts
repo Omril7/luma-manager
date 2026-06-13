@@ -15,7 +15,7 @@ function monthLabel(year: number, month: number) {
 type Receipt = {
   id: string
   expense_id: string
-  cloudinary_url: string
+  cloudinary_url: string | null
   file_type: string | null
 }
 
@@ -225,6 +225,7 @@ export async function POST(req: NextRequest) {
   const attachments: { filename: string; content: Buffer; contentType: string }[] = []
 
   for (const receipt of allReceipts) {
+    if (!receipt.cloudinary_url) continue
     try {
       const res = await fetch(receipt.cloudinary_url)
       if (!res.ok) continue

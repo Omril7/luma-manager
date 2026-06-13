@@ -146,10 +146,11 @@ export type Database = {
           id: string
           expense_id: string
           user_id: string
-          cloudinary_public_id: string
-          cloudinary_url: string
+          cloudinary_public_id: string | null
+          cloudinary_url: string | null
           file_type: string | null
           created_at: string
+          cleaned_up_at: string | null
         }
         Insert: {
           id?: string
@@ -159,15 +160,17 @@ export type Database = {
           cloudinary_url: string
           file_type?: string | null
           created_at?: string
+          cleaned_up_at?: string | null
         }
         Update: {
           id?: string
           expense_id?: string
           user_id?: string
-          cloudinary_public_id?: string
-          cloudinary_url?: string
+          cloudinary_public_id?: string | null
+          cloudinary_url?: string | null
           file_type?: string | null
           created_at?: string
+          cleaned_up_at?: string | null
         }
         Relationships: []
       }

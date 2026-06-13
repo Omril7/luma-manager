@@ -282,7 +282,7 @@ export async function deleteExpense(expenseId: string) {
 
   // Clean up Cloudinary files (best-effort, don't fail the delete if this errors)
   if (receipts) {
-    await Promise.allSettled(receipts.map(r => deleteFile(r.cloudinary_public_id)))
+    await Promise.allSettled(receipts.filter(r => r.cloudinary_public_id).map(r => deleteFile(r.cloudinary_public_id!)))
   }
 
   revalidatePath('/expenses')

@@ -6,7 +6,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Menu, X, TrendingUp, Receipt, DollarSign, CalendarDays, Tag, Settings, LogOut } from 'lucide-react'
+import { Menu, X, TrendingUp, Receipt, DollarSign, CalendarDays, Tag, Settings, LogOut, Archive } from 'lucide-react'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 
 const navItems = [
@@ -15,6 +15,7 @@ const navItems = [
   { href: '/income', label: 'הכנסות', Icon: DollarSign },
   { href: '/calendar', label: 'יומן', Icon: CalendarDays },
   { href: '/pricing', label: 'תמחור', Icon: Tag },
+  { href: '/storage', label: 'איחסון', Icon: Archive },
   { href: '/settings', label: 'הגדרות', Icon: Settings },
 ]
 

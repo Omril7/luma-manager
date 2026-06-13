@@ -21,8 +21,9 @@ type Category = {
 
 type Receipt = {
   id: string
-  cloudinary_url: string
+  cloudinary_url: string | null
   file_type: string | null
+  cleaned_up_at: string | null
 }
 
 type Expense = {
@@ -186,14 +187,21 @@ export default function ExpenseModal({ categories, expense, onClose, onCategoryM
 
             {expense?.receipts && expense.receipts.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
-                {expense.receipts.map(r => (
-                  <a key={r.id} href={r.cloudinary_url} target="_blank" rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs text-primary bg-primary/5 hover:bg-primary/10 border border-primary/20 rounded-lg px-2.5 py-1.5 transition-colors">
-                    <FileText className="h-3 w-3" />
-                    {r.file_type === 'pdf' ? 'PDF' : 'תמונה'}
-                    <ExternalLink className="h-2.5 w-2.5 opacity-50" />
-                  </a>
-                ))}
+                {expense.receipts.map(r =>
+                  r.cleaned_up_at ? (
+                    <span key={r.id} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-muted border border-border rounded-lg px-2.5 py-1.5">
+                      <FileText className="h-3 w-3" />
+                      ארכיון
+                    </span>
+                  ) : (
+                    <a key={r.id} href={r.cloudinary_url ?? '#'} target="_blank" rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs text-primary bg-primary/5 hover:bg-primary/10 border border-primary/20 rounded-lg px-2.5 py-1.5 transition-colors">
+                      <FileText className="h-3 w-3" />
+                      {r.file_type === 'pdf' ? 'PDF' : 'תמונה'}
+                      <ExternalLink className="h-2.5 w-2.5 opacity-50" />
+                    </a>
+                  )
+                )}
               </div>
             )}
 

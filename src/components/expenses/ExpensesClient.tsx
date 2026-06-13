@@ -18,8 +18,9 @@ type Category = {
 
 type Receipt = {
   id: string
-  cloudinary_url: string
+  cloudinary_url: string | null
   file_type: string | null
+  cleaned_up_at: string | null
 }
 
 type Installment = {

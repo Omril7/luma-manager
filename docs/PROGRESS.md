@@ -1,3 +1,13 @@
+## [2026-06-13] Storage page (איחסון)
+- New `/storage` page listing months with receipt counts (active vs archived)
+- Per-month cleanup flow: Step 1 downloads all receipts as ZIP, Step 2 confirms deletion from Cloudinary and marks rows archived
+- Migration `20260613000000_receipts_cleanup.sql`: made `cloudinary_public_id` and `cloudinary_url` nullable; added `cleaned_up_at timestamptz` to `receipts`
+- API route `GET /api/storage/download?year&month` — builds ZIP using jszip and streams it
+- Server action `cleanupMonth` — deletes from Cloudinary, nulls cloudinary fields, sets `cleaned_up_at`
+- Expenses table receipt column now shows archive icon for cleaned-up receipts instead of a broken link
+- Sidebar: added "איחסון" nav item (Archive icon)
+- Build passes cleanly
+
 ## [2026-06-08] Bug fixes & chart redesign
 
 ### Bug fixes

@@ -6,12 +6,13 @@ import { toast } from 'sonner'
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table'
 import { Button } from '@/components/ui/button'
 import { formatILS } from '@/lib/utils'
-import { FileText, Image } from 'lucide-react'
+import { FileText, Image as ImageIcon, Archive } from 'lucide-react'
 
 type Receipt = {
   id: string
-  cloudinary_url: string
+  cloudinary_url: string | null
   file_type: string | null
+  cleaned_up_at: string | null
 }
 
 type Installment = {
@@ -137,11 +138,17 @@ export default function ExpensesTable({ expenses, filterMonth, onEdit }: Props) 
       cell: r =>
         r.receipts.length > 0 ? (
           <div className="flex gap-1">
-            {r.receipts.map(rec => (
-              <a key={rec.id} href={rec.cloudinary_url} target="_blank" rel="noreferrer" title="פתח קבלה" className="text-muted-foreground hover:text-foreground transition-colors">
-                {rec.file_type === 'pdf' ? <FileText size={16} /> : <Image size={16} />}
-              </a>
-            ))}
+            {r.receipts.map(rec =>
+              rec.cleaned_up_at ? (
+                <span key={rec.id} title="קובץ בארכיון" className="text-muted-foreground/40">
+                  <Archive size={16} />
+                </span>
+              ) : (
+                <a key={rec.id} href={rec.cloudinary_url ?? '#'} target="_blank" rel="noreferrer" title="פתח קבלה" className="text-muted-foreground hover:text-foreground transition-colors">
+                  {rec.file_type === 'pdf' ? <FileText size={16} /> : <ImageIcon size={16} />}
+                </a>
+              )
+            )}
           </div>
         ) : <span className="text-muted-foreground/50">—</span>,
     },

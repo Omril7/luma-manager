@@ -1,7 +1,6 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx supabase *)",
       "Bash(npx shadcn *)",
       "Bash(npm install *)",
       "Bash(mkdir -p *)",

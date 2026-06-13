@@ -1,5 +1,11 @@
 @import 'react-big-calendar/lib/css/react-big-calendar.css';
 
+@keyframes indeterminate {
+  0%   { transform: translateX(100%) scaleX(0.4); }
+  40%  { transform: translateX(0%)   scaleX(0.4); }
+  100% { transform: translateX(-100%) scaleX(0.4); }
+}
+
 /* ── react-big-calendar design overrides ── */
 .rbc-calendar { font-family: inherit; color: hsl(var(--foreground)); }
 .rbc-toolbar { display: none; } /* replaced by custom toolbar */
