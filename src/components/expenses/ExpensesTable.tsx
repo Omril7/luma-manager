@@ -153,9 +153,11 @@ export default function ExpensesTable({ expenses, filterMonth, onEdit, onEditIns
       cell: r => {
         // Recurring: show only receipts for this specific installment
         // Non-recurring: show receipts not linked to any installment (belong to the whole expense)
-        const visibleReceipts = r.is_recurring
+        const visibleReceipts = r.is_recurring && r._installmentNum > 1
           ? r.receipts.filter(rec => rec.installment_id === r._installmentId)
-          : r.receipts.filter(rec => rec.installment_id === null)
+          : r._installmentNum === 1
+            ? r.receipts.filter(rec => rec.installment_id === null)
+            : []
         return visibleReceipts.length > 0 ? (
           <div className="flex gap-1">
             {visibleReceipts.map(rec =>
@@ -178,7 +180,7 @@ export default function ExpensesTable({ expenses, filterMonth, onEdit, onEditIns
       header: 'פעולות',
       cell: r => (
         <div className="flex gap-1">
-          {r.is_recurring ? (
+          {r.is_recurring && r._installmentNum > 1 ? (
             <Button
               variant="ghost"
               size="sm"

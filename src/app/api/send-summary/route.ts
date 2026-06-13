@@ -12,22 +12,17 @@ function monthLabel(year: number, month: number) {
   return `${MONTH_NAMES_HE[month - 1]} ${year}`
 }
 
-type Receipt = {
-  id: string
-  expense_id: string
-  cloudinary_url: string | null
-  file_type: string | null
-}
-
 type InstallmentRow = {
   id: string
   amount: number
   vat_amount: number
   due_month: string
+  installment_number: number
   expenses: {
     id: string
     description: string
     is_personal: boolean
+    is_recurring: boolean
     transaction_date: string
     expense_categories: { name: string; is_vat_recognized: boolean } | null
   }
@@ -65,9 +60,9 @@ export async function POST(req: NextRequest) {
   const { data: raw, error: queryError } = await supabase
     .from('expense_installments')
     .select(`
-      id, amount, vat_amount, due_month,
+      id, amount, vat_amount, due_month, installment_number,
       expenses!inner(
-        id, description, is_personal, transaction_date,
+        id, description, is_personal, is_recurring, transaction_date,
         expense_categories(name, is_vat_recognized)
       )
     `)
@@ -86,16 +81,24 @@ export async function POST(req: NextRequest) {
   const { data: receiptsData } = expenseIds.length > 0
     ? await supabase
         .from('receipts')
-        .select('id, expense_id, cloudinary_url, file_type')
+        .select('id, expense_id, cloudinary_url, file_type, installment_id')
         .in('expense_id', expenseIds)
         .eq('user_id', user.id)
     : { data: [] }
 
-  const receiptsByExpense = new Map<string, Receipt[]>()
-  for (const r of receiptsData ?? []) {
-    const list = receiptsByExpense.get(r.expense_id) ?? []
-    list.push(r)
-    receiptsByExpense.set(r.expense_id, list)
+  // Determine which receipts belong to this specific month:
+  // - Recurring: only if receipt.installment_id matches the installment for this month
+  // - Non-recurring: only on installment #1 (the purchase month), unlinked receipts only
+  const qualifyingReceiptIds = new Set<string>()
+  for (const row of rows) {
+    for (const receipt of receiptsData ?? []) {
+      if (receipt.expense_id !== row.expenses.id) continue
+      if (row.expenses.is_recurring) {
+        if (receipt.installment_id === row.id) qualifyingReceiptIds.add(receipt.id)
+      } else {
+        if (row.installment_number === 1 && receipt.installment_id === null) qualifyingReceiptIds.add(receipt.id)
+      }
+    }
   }
 
   const vatRecognizedRows = rows.filter(
@@ -221,10 +224,10 @@ export async function POST(req: NextRequest) {
 </html>`
 
   // Download receipt files and attach
-  const allReceipts = Array.from(receiptsByExpense.values()).flat()
+  const qualifyingReceipts = (receiptsData ?? []).filter(r => qualifyingReceiptIds.has(r.id))
   const attachments: { filename: string; content: Buffer; contentType: string }[] = []
 
-  for (const receipt of allReceipts) {
+  for (const receipt of qualifyingReceipts) {
     if (!receipt.cloudinary_url) continue
     try {
       const res = await fetch(receipt.cloudinary_url)
