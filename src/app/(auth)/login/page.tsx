@@ -11,7 +11,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PasswordInput } from '@/components/ui/password-input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
 import Link from 'next/link'
 import { toast } from 'sonner'
 
@@ -25,7 +24,6 @@ type FormData = z.infer<typeof schema>
 export default function LoginPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-  const [passkeyLoading, setPasskeyLoading] = useState(false)
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
   })
@@ -46,19 +44,6 @@ export default function LoginPage() {
     router.refresh()
   }
 
-  async function signInWithPasskey() {
-    setPasskeyLoading(true)
-    const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPasskey()
-    if (error) {
-      toast.error('שגיאה בכניסה עם מפתח גישה: ' + error.message)
-      setPasskeyLoading(false)
-      return
-    }
-    router.push('/dashboard')
-    router.refresh()
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <Card className="w-full max-w-md">
@@ -66,23 +51,6 @@ export default function LoginPage() {
           <CardTitle className="text-2xl">כניסה למערכת</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full gap-2"
-            onClick={signInWithPasskey}
-            disabled={passkeyLoading}
-          >
-            <PasskeyIcon />
-            {passkeyLoading ? 'מאמת...' : 'כניסה עם מפתח גישה (Passkey)'}
-          </Button>
-
-          <div className="flex items-center gap-3">
-            <Separator className="flex-1" />
-            <span className="text-xs text-muted-foreground">או</span>
-            <Separator className="flex-1" />
-          </div>
-
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-1">
               <Label htmlFor="email">כתובת מייל</Label>
@@ -111,12 +79,3 @@ export default function LoginPage() {
   )
 }
 
-function PasskeyIcon() {
-  return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <circle cx="8" cy="8" r="4" />
-      <path d="M16 19h6M19 16v6M12.5 15.5L15 13l3 3" />
-      <path d="M2 20c0-2.2 2.7-4 6-4" />
-    </svg>
-  )
-}

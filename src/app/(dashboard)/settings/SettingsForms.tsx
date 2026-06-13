@@ -9,7 +9,6 @@ import { saveGeneralSettings, saveBalanceSettings, saveEmailSettings, changePass
 import type { Settings } from '@/stores/settingsStore'
 import { toast } from 'sonner'
 import { useEffect } from 'react'
-import { PasskeyManager } from '@/components/layout/PasskeyManager'
 import { Settings2, Wallet, Mail, User } from 'lucide-react'
 import { PasswordInput } from '@/components/ui/password-input'
 
@@ -188,13 +187,6 @@ export function AccountSettingsForm({ email }: { email: string }) {
         <div className="space-y-1">
           <Label>כתובת מייל</Label>
           <p className="text-sm text-muted-foreground" dir="ltr">{email}</p>
-        </div>
-        <div className="border-t pt-4 space-y-2">
-          <p className="text-sm font-medium">מפתחות גישה (Passkeys)</p>
-          <p className="text-xs text-muted-foreground">
-            כניסה עם טביעת אצבע, זיהוי פנים, PIN מכשיר או מפתח אבטחה
-          </p>
-          <PasskeyManager />
         </div>
         <form action={action} className="space-y-4 border-t pt-4">
           <p className="text-sm font-medium">שינוי סיסמה</p>
