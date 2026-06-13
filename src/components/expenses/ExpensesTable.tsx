@@ -13,6 +13,7 @@ type Receipt = {
   cloudinary_url: string | null
   file_type: string | null
   cleaned_up_at: string | null
+  installment_id: string | null
 }
 
 type Installment = {
@@ -38,20 +39,32 @@ type Expense = {
   expense_installments: Installment[]
 }
 
+type InstallmentEditTarget = {
+  installmentId: string
+  installmentNumber: number
+  dueMonth: string
+  amount: number
+  expenseDescription: string
+  receipts: Receipt[]
+}
+
 type Props = {
   expenses: Expense[]
   filterMonth: string
   onEdit: (expense: Expense) => void
+  onEditInstallment: (target: InstallmentEditTarget) => void
 }
 
 // Flattened row for the table
 type Row = Expense & {
+  _installmentId: string
   _installmentNum: number
   _installmentAmt: number
   _vatAmt: number
+  _dueMonth: string
 }
 
-export default function ExpensesTable({ expenses, filterMonth, onEdit }: Props) {
+export default function ExpensesTable({ expenses, filterMonth, onEdit, onEditInstallment }: Props) {
   const [isPending, startTransition] = useTransition()
 
   function handleDelete(id: string) {
@@ -69,9 +82,11 @@ export default function ExpensesTable({ expenses, filterMonth, onEdit }: Props) 
       if (!inst) return null
       return {
         ...exp,
+        _installmentId: inst.id,
         _installmentNum: inst.installment_number,
         _installmentAmt: inst.amount,
         _vatAmt: inst.vat_amount,
+        _dueMonth: inst.due_month,
       }
     })
     .filter((r): r is Row => r !== null)
@@ -135,10 +150,15 @@ export default function ExpensesTable({ expenses, filterMonth, onEdit }: Props) 
     {
       key: 'receipts',
       header: 'קבלה',
-      cell: r =>
-        r.receipts.length > 0 ? (
+      cell: r => {
+        // Recurring: show only receipts for this specific installment
+        // Non-recurring: show receipts not linked to any installment (belong to the whole expense)
+        const visibleReceipts = r.is_recurring
+          ? r.receipts.filter(rec => rec.installment_id === r._installmentId)
+          : r.receipts.filter(rec => rec.installment_id === null)
+        return visibleReceipts.length > 0 ? (
           <div className="flex gap-1">
-            {r.receipts.map(rec =>
+            {visibleReceipts.map(rec =>
               rec.cleaned_up_at ? (
                 <span key={rec.id} title="קובץ בארכיון" className="text-muted-foreground/40">
                   <Archive size={16} />
@@ -150,14 +170,33 @@ export default function ExpensesTable({ expenses, filterMonth, onEdit }: Props) 
               )
             )}
           </div>
-        ) : <span className="text-muted-foreground/50">—</span>,
+        ) : <span className="text-muted-foreground/50">—</span>
+      },
     },
     {
       key: 'actions',
       header: 'פעולות',
       cell: r => (
         <div className="flex gap-1">
-          <Button variant="ghost" size="sm" onClick={() => onEdit(r)} className="h-7 px-2 text-xs text-muted-foreground hover:text-primary">ערוך</Button>
+          {r.is_recurring ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onEditInstallment({
+                installmentId: r._installmentId,
+                installmentNumber: r._installmentNum,
+                dueMonth: r._dueMonth,
+                amount: r._installmentAmt,
+                expenseDescription: r.description,
+                receipts: r.receipts.filter(rec => rec.installment_id === r._installmentId),
+              })}
+              className="h-7 px-2 text-xs text-muted-foreground hover:text-primary"
+            >
+              ערוך חודש
+            </Button>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={() => onEdit(r)} className="h-7 px-2 text-xs text-muted-foreground hover:text-primary">ערוך</Button>
+          )}
           <Button variant="ghost" size="sm" onClick={() => handleDelete(r.id)} disabled={isPending} className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive">מחק</Button>
         </div>
       ),

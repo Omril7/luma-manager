@@ -7,6 +7,7 @@ import ExpenseSummaryCards from './ExpenseSummaryCards'
 import ExpensesTable from './ExpensesTable'
 import ExpensesCharts from './ExpensesCharts'
 import ExpenseModal from './ExpenseModal'
+import InstallmentModal from './InstallmentModal'
 import CategoryModal from './CategoryModal'
 import SendSummaryModal from './SendSummaryModal'
 
@@ -21,6 +22,16 @@ type Receipt = {
   cloudinary_url: string | null
   file_type: string | null
   cleaned_up_at: string | null
+  installment_id: string | null
+}
+
+type InstallmentEditTarget = {
+  installmentId: string
+  installmentNumber: number
+  dueMonth: string
+  amount: number
+  expenseDescription: string
+  receipts: Receipt[]
 }
 
 type Installment = {
@@ -69,6 +80,7 @@ export default function ExpensesClient({ categories, expenses, allInstallments, 
   const [showCategoryModal, setShowCategoryModal] = useState(false)
   const [showSummaryModal, setShowSummaryModal] = useState(false)
   const [editingExpense, setEditingExpense] = useState<Expense | undefined>(undefined)
+  const [editingInstallment, setEditingInstallment] = useState<InstallmentEditTarget | undefined>(undefined)
 
   const filterMonth = `${year}-${String(month).padStart(2, '0')}`
 
@@ -180,6 +192,7 @@ export default function ExpensesClient({ categories, expenses, allInstallments, 
           expenses={expenses}
           filterMonth={filterMonth}
           onEdit={openEdit}
+          onEditInstallment={setEditingInstallment}
         />
       </div>
 
@@ -199,6 +212,18 @@ export default function ExpensesClient({ categories, expenses, allInstallments, 
           expense={editingExpense}
           onClose={() => setShowExpenseModal(false)}
           onCategoryModalOpen={() => setShowCategoryModal(true)}
+        />
+      )}
+
+      {editingInstallment && (
+        <InstallmentModal
+          installmentId={editingInstallment.installmentId}
+          installmentNumber={editingInstallment.installmentNumber}
+          dueMonth={editingInstallment.dueMonth}
+          currentAmount={editingInstallment.amount}
+          expenseDescription={editingInstallment.expenseDescription}
+          receipts={editingInstallment.receipts}
+          onClose={() => setEditingInstallment(undefined)}
         />
       )}
 

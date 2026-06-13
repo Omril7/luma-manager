@@ -152,8 +152,18 @@ export async function createExpense(_prev: unknown, formData: FormData) {
     }
   })
 
-  const { error: installmentError } = await supabase.from('expense_installments').insert(installments)
+  const { data: insertedInstallments, error: installmentError } = await supabase
+    .from('expense_installments')
+    .insert(installments)
+    .select('id, installment_number')
   if (installmentError) return { error: installmentError.message }
+
+  // For recurring expenses, receipts are linked to the specific installment so each month
+  // can have its own receipt. For non-recurring, installment_id is null (receipt belongs to
+  // the expense across all installment payments).
+  const firstInstallmentId = parsed.data.is_recurring
+    ? (insertedInstallments?.find(i => i.installment_number === 1)?.id ?? null)
+    : null
 
   // Handle receipt uploads
   const files = formData.getAll('receipts') as File[]
@@ -168,6 +178,7 @@ export async function createExpense(_prev: unknown, formData: FormData) {
       cloudinary_public_id: uploaded.public_id,
       cloudinary_url: uploaded.secure_url,
       file_type: uploaded.resource_type === 'image' ? 'image' : 'pdf',
+      installment_id: firstInstallmentId,
     })
   }
 
@@ -222,24 +233,28 @@ export async function updateExpense(_prev: unknown, formData: FormData) {
 
   if (updateError) return { error: updateError.message }
 
-  // Rebuild installments
-  await supabase.from('expense_installments').delete().eq('expense_id', expenseId)
-  const installmentAmount = parsed.data.total_amount / numInstallments
-  const baseDate = new Date(parsed.data.transaction_date)
-  baseDate.setDate(1)
-  const installments = Array.from({ length: numInstallments }, (_, i) => {
-    const dueDate = new Date(baseDate)
-    dueDate.setMonth(dueDate.getMonth() + i)
-    return {
-      expense_id: expenseId,
-      user_id: user.id,
-      installment_number: i + 1,
-      due_month: dueDate.toISOString().slice(0, 10),
-      amount: installmentAmount,
-      vat_amount: installmentVat(parsed.data.total_amount, i + 1, vatRate),
-    }
-  })
-  await supabase.from('expense_installments').insert(installments)
+  // Only rebuild installments for non-recurring expenses. Recurring expenses accumulate
+  // one installment per month via ensureRecurringInstallments — wiping them here would
+  // destroy the per-month history.
+  if (!parsed.data.is_recurring) {
+    await supabase.from('expense_installments').delete().eq('expense_id', expenseId)
+    const installmentAmount = parsed.data.total_amount / numInstallments
+    const baseDate = new Date(parsed.data.transaction_date)
+    baseDate.setDate(1)
+    const installments = Array.from({ length: numInstallments }, (_, i) => {
+      const dueDate = new Date(baseDate)
+      dueDate.setMonth(dueDate.getMonth() + i)
+      return {
+        expense_id: expenseId,
+        user_id: user.id,
+        installment_number: i + 1,
+        due_month: dueDate.toISOString().slice(0, 10),
+        amount: installmentAmount,
+        vat_amount: installmentVat(parsed.data.total_amount, i + 1, vatRate),
+      }
+    })
+    await supabase.from('expense_installments').insert(installments)
+  }
 
   // Handle new receipt uploads
   const files = formData.getAll('receipts') as File[]
@@ -300,6 +315,53 @@ export async function deleteReceipt(receiptId: string) {
     .eq('id', receiptId)
     .eq('user_id', user.id)
   if (error) return { error: error.message }
+  revalidatePath('/expenses')
+  return { success: true }
+}
+
+// ─── Installment edit (per-month correction for recurring expenses) ───────────
+
+export async function updateInstallment(_prev: unknown, formData: FormData) {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'לא מחובר' }
+
+  const installmentId = formData.get('installment_id') as string
+  const amount = parseFloat(formData.get('amount') as string)
+  if (!installmentId || isNaN(amount) || amount <= 0) return { error: 'נתונים לא תקינים' }
+
+  // Fetch installment to get the parent expense_id (needed for the receipts insert)
+  const { data: installment } = await supabase
+    .from('expense_installments')
+    .select('expense_id')
+    .eq('id', installmentId)
+    .eq('user_id', user.id)
+    .single()
+  if (!installment) return { error: 'תשלום לא נמצא' }
+
+  const { error: updateError } = await supabase
+    .from('expense_installments')
+    .update({ amount })
+    .eq('id', installmentId)
+    .eq('user_id', user.id)
+  if (updateError) return { error: updateError.message }
+
+  const files = formData.getAll('receipts') as File[]
+  for (const file of files) {
+    if (file.size === 0) continue
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const filename = `${installmentId}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+    const uploaded = await uploadFile(buffer, filename)
+    await supabase.from('receipts').insert({
+      expense_id: installment.expense_id,
+      user_id: user.id,
+      installment_id: installmentId,
+      cloudinary_public_id: uploaded.public_id,
+      cloudinary_url: uploaded.secure_url,
+      file_type: uploaded.resource_type === 'image' ? 'image' : 'pdf',
+    })
+  }
+
   revalidatePath('/expenses')
   return { success: true }
 }

@@ -33,7 +33,7 @@ export default async function ExpensesPage() {
         id, description, category_id, total_amount, transaction_date,
         is_recurring, installments_total, is_personal, notes,
         expense_categories(id, name, is_vat_recognized),
-        receipts(id, cloudinary_url, file_type, cleaned_up_at),
+        receipts(id, cloudinary_url, file_type, cleaned_up_at, installment_id),
         expense_installments(id, installment_number, due_month, amount, vat_amount)
       `)
       .eq('user_id', user.id)

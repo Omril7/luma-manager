@@ -151,6 +151,7 @@ export type Database = {
           file_type: string | null
           created_at: string
           cleaned_up_at: string | null
+          installment_id: string | null
         }
         Insert: {
           id?: string
@@ -161,6 +162,7 @@ export type Database = {
           file_type?: string | null
           created_at?: string
           cleaned_up_at?: string | null
+          installment_id?: string | null
         }
         Update: {
           id?: string
@@ -171,6 +173,7 @@ export type Database = {
           file_type?: string | null
           created_at?: string
           cleaned_up_at?: string | null
+          installment_id?: string | null
         }
         Relationships: []
       }
