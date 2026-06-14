@@ -4,7 +4,7 @@ import { useState } from 'react'
 import CleanupModal from './CleanupModal'
 import { Button } from '@/components/ui/button'
 import type { MonthStats } from '@/app/(dashboard)/storage/actions'
-import { Archive, FileArchive, DollarSign, Clock } from 'lucide-react'
+import { Archive, FileArchive, DollarSign, Clock, Monitor } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const MONTH_NAMES = [
@@ -99,7 +99,23 @@ export default function StorageClient({ stats }: Props) {
   const targetStats = cleanupTarget ? stats.find(s => s.month === cleanupTarget) : null
 
   return (
-    <div className="p-6 max-w-2xl mx-auto space-y-6">
+    <div className="p-6 max-w-2xl mx-auto">
+      {/* Mobile/tablet blocker */}
+      <div className="lg:hidden rounded-xl border bg-card p-10 text-center space-y-4">
+        <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center mx-auto">
+          <Monitor className="h-7 w-7 text-muted-foreground/60" />
+        </div>
+        <div className="space-y-2">
+          <p className="font-semibold text-base">יש לפתוח במחשב</p>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            עמוד זה מוריד קובץ ZIP עם הקבלות.
+            <br />
+            כדי לשמור את הקובץ בצורה נוחה יש להיכנס מהמחשב הנייד או השולחני.
+          </p>
+        </div>
+      </div>
+
+      <div className="hidden lg:flex lg:flex-col lg:gap-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -147,6 +163,7 @@ export default function StorageClient({ stats }: Props) {
       {tab === 'income' && (
         <IncomePlaceholder />
       )}
+      </div>
 
       {cleanupTarget && targetStats && (
         <CleanupModal
