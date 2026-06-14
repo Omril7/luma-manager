@@ -53,11 +53,6 @@ function CloudinaryUsageCard({ usage }: { usage: CloudinaryUsage }) {
         <div className="rounded-lg bg-muted/50 px-3 py-2.5 space-y-0.5">
           <p className="text-xs text-muted-foreground">אחסון</p>
           <p className="text-sm font-semibold text-right" dir="ltr">{formatBytes(usage.storage_bytes)}</p>
-          {hasStorageLimit && (
-            <p className={cn('text-xs', storagePctColor)}>
-              <span dir="ltr">{storagePct.toFixed(1)}%</span> מתוך <span dir="ltr">{formatBytes(usage.storage_limit)}</span>
-            </p>
-          )}
         </div>
         <div className="rounded-lg bg-muted/50 px-3 py-2.5 space-y-0.5">
           <p className="text-xs text-muted-foreground">רוחב פס</p>
