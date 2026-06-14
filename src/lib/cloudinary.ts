@@ -6,6 +6,42 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 })
 
+// Known storage limits per plan name (bytes). Used when the API omits storage.limit.
+const PLAN_STORAGE_LIMITS: Record<string, number> = {
+  'Free': 25 * 1024 * 1024 * 1024,
+}
+
+export type CloudinaryUsage = {
+  plan: string
+  storage_bytes: number
+  storage_limit: number  // 0 = truly unknown
+  bandwidth_bytes: number
+  resources: number
+  credits_used: number
+  credits_limit: number  // 0 = unknown
+}
+
+export async function getUsage(): Promise<CloudinaryUsage | null> {
+  try {
+    const result = await cloudinary.api.usage()
+    const plan: string = result.plan ?? ''
+    const storageLimit: number =
+      result.storage?.limit ?? PLAN_STORAGE_LIMITS[plan] ?? 0
+
+    return {
+      plan,
+      storage_bytes: result.storage?.usage ?? 0,
+      storage_limit: storageLimit,
+      bandwidth_bytes: result.bandwidth?.usage ?? 0,
+      resources: result.resources ?? 0,
+      credits_used: result.credits?.usage ?? 0,
+      credits_limit: result.credits?.limit ?? 0,
+    }
+  } catch {
+    return null
+  }
+}
+
 export async function deleteFile(publicId: string): Promise<void> {
   await cloudinary.uploader.destroy(publicId, { resource_type: 'auto' })
 }

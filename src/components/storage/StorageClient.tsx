@@ -4,6 +4,7 @@ import { useState } from 'react'
 import CleanupModal from './CleanupModal'
 import { Button } from '@/components/ui/button'
 import type { MonthStats } from '@/app/(dashboard)/storage/actions'
+import type { CloudinaryUsage } from '@/lib/cloudinary'
 import { Archive, FileArchive, DollarSign, Clock, Monitor } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -14,8 +15,84 @@ const MONTH_NAMES = [
 
 type Tab = 'expenses' | 'income'
 
+function formatBytes(bytes: number): string {
+  if (bytes >= 1_073_741_824) return `${(bytes / 1_073_741_824).toFixed(1)} GB`
+  if (bytes >= 1_048_576) return `${(bytes / 1_048_576).toFixed(1)} MB`
+  return `${(bytes / 1024).toFixed(0)} KB`
+}
+
+function ProgressBar({ pct, className }: { pct: number; className?: string }) {
+  const color = pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-400' : 'bg-primary'
+  return (
+    <div className={cn('h-1.5 w-full rounded-full bg-muted overflow-hidden', className)}>
+      <div className={cn('h-full rounded-full transition-all', color)} style={{ width: `${Math.min(pct, 100)}%` }} />
+    </div>
+  )
+}
+
+function CloudinaryUsageCard({ usage }: { usage: CloudinaryUsage }) {
+  const hasStorageLimit = usage.storage_limit > 0
+  const storagePct = hasStorageLimit ? (usage.storage_bytes / usage.storage_limit) * 100 : 0
+  const storagePctColor = storagePct >= 90 ? 'text-red-500' : storagePct >= 70 ? 'text-amber-500' : 'text-muted-foreground'
+
+  const hasCredits = usage.credits_limit > 0
+  const creditsPct = hasCredits ? (usage.credits_used / usage.credits_limit) * 100 : 0
+
+  return (
+    <div className="rounded-xl border bg-card p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold">שימוש ב-Cloudinary</p>
+        {usage.plan && (
+          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+            {usage.plan}
+          </span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        <div className="rounded-lg bg-muted/50 px-3 py-2.5 space-y-0.5">
+          <p className="text-xs text-muted-foreground">אחסון</p>
+          <p className="text-sm font-semibold">{formatBytes(usage.storage_bytes)}</p>
+          {hasStorageLimit && (
+            <p className={cn('text-xs', storagePctColor)}>{storagePct.toFixed(1)}% מתוך {formatBytes(usage.storage_limit)}</p>
+          )}
+        </div>
+        <div className="rounded-lg bg-muted/50 px-3 py-2.5 space-y-0.5">
+          <p className="text-xs text-muted-foreground">רוחב פס</p>
+          <p className="text-sm font-semibold">{formatBytes(usage.bandwidth_bytes)}</p>
+        </div>
+        <div className="rounded-lg bg-muted/50 px-3 py-2.5 space-y-0.5">
+          <p className="text-xs text-muted-foreground">קבצים</p>
+          <p className="text-sm font-semibold">{usage.resources.toLocaleString()}</p>
+        </div>
+      </div>
+
+      {hasStorageLimit && (
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">אחסון כולל</span>
+            <span className="font-medium" dir="ltr">{formatBytes(usage.storage_bytes)} / {formatBytes(usage.storage_limit)}</span>
+          </div>
+          <ProgressBar pct={storagePct} />
+        </div>
+      )}
+
+      {hasCredits && (
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">קרדיטים חודשיים</span>
+            <span className="font-medium" dir="ltr">{usage.credits_used.toFixed(2)} / {usage.credits_limit}</span>
+          </div>
+          <ProgressBar pct={creditsPct} />
+        </div>
+      )}
+    </div>
+  )
+}
+
 type Props = {
   stats: MonthStats[]
+  cloudinaryUsage: CloudinaryUsage | null
 }
 
 function MonthList({ stats, onCleanup }: { stats: MonthStats[]; onCleanup: (month: string) => void }) {
@@ -92,7 +169,7 @@ function IncomePlaceholder() {
   )
 }
 
-export default function StorageClient({ stats }: Props) {
+export default function StorageClient({ stats, cloudinaryUsage }: Props) {
   const [tab, setTab] = useState<Tab>('expenses')
   const [cleanupTarget, setCleanupTarget] = useState<string | null>(null)
 
@@ -116,53 +193,56 @@ export default function StorageClient({ stats }: Props) {
       </div>
 
       <div className="hidden lg:flex lg:flex-col lg:gap-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
-          <FileArchive className="h-5 w-5 text-primary" />
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+            <FileArchive className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold">איחסון קבצים</h1>
+            <p className="text-sm text-muted-foreground">ניהול קבצים שמורים ב-Cloudinary</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-semibold">איחסון קבצים</h1>
-          <p className="text-sm text-muted-foreground">ניהול קבצים שמורים ב-Cloudinary</p>
+
+        {/* Cloudinary usage */}
+        {cloudinaryUsage && <CloudinaryUsageCard usage={cloudinaryUsage} />}
+
+        {/* Tab switcher */}
+        <div className="flex items-center bg-muted border border-border rounded-lg p-0.5 gap-0.5">
+          <button
+            onClick={() => setTab('expenses')}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all',
+              tab === 'expenses'
+                ? 'bg-card shadow-[0_1px_3px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.6)] text-foreground'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Archive className="h-3.5 w-3.5" />
+            הוצאות
+          </button>
+          <button
+            onClick={() => setTab('income')}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all',
+              tab === 'income'
+                ? 'bg-card shadow-[0_1px_3px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.6)] text-foreground'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <DollarSign className="h-3.5 w-3.5" />
+            הכנסות
+          </button>
         </div>
-      </div>
 
-      {/* Tab switcher */}
-      <div className="inline-flex items-center bg-muted border border-border rounded-lg p-0.5 gap-0.5">
-        <button
-          onClick={() => setTab('expenses')}
-          className={cn(
-            'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all',
-            tab === 'expenses'
-              ? 'bg-card shadow-[0_1px_3px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.6)] text-foreground'
-              : 'text-muted-foreground hover:text-foreground'
-          )}
-        >
-          <Archive className="h-3.5 w-3.5" />
-          הוצאות
-        </button>
-        <button
-          onClick={() => setTab('income')}
-          className={cn(
-            'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all',
-            tab === 'income'
-              ? 'bg-card shadow-[0_1px_3px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.6)] text-foreground'
-              : 'text-muted-foreground hover:text-foreground'
-          )}
-        >
-          <DollarSign className="h-3.5 w-3.5" />
-          הכנסות
-        </button>
-      </div>
+        {/* Tab content */}
+        {tab === 'expenses' && (
+          <MonthList stats={stats} onCleanup={setCleanupTarget} />
+        )}
 
-      {/* Tab content */}
-      {tab === 'expenses' && (
-        <MonthList stats={stats} onCleanup={setCleanupTarget} />
-      )}
-
-      {tab === 'income' && (
-        <IncomePlaceholder />
-      )}
+        {tab === 'income' && (
+          <IncomePlaceholder />
+        )}
       </div>
 
       {cleanupTarget && targetStats && (
