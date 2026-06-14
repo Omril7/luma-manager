@@ -203,6 +203,7 @@ export default function ExpensesClient({ categories, expenses, allInstallments, 
         <ExpensesTable
           expenses={expenses}
           filterMonth={filterMonth}
+          isMonthClosed={isMonthClosed}
           onEdit={openEdit}
           onEditInstallment={setEditingInstallment}
         />
@@ -224,6 +225,7 @@ export default function ExpensesClient({ categories, expenses, allInstallments, 
         <ExpenseModal
           categories={categories}
           expense={editingExpense}
+          closedMonths={closedMonths}
           onClose={() => setShowExpenseModal(false)}
           onCategoryModalOpen={() => setShowCategoryModal(true)}
         />

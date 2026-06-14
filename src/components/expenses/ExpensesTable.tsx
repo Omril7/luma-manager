@@ -51,6 +51,7 @@ type InstallmentEditTarget = {
 type Props = {
   expenses: Expense[]
   filterMonth: string
+  isMonthClosed: boolean
   onEdit: (expense: Expense) => void
   onEditInstallment: (target: InstallmentEditTarget) => void
 }
@@ -64,7 +65,7 @@ type Row = Expense & {
   _dueMonth: string
 }
 
-export default function ExpensesTable({ expenses, filterMonth, onEdit, onEditInstallment }: Props) {
+export default function ExpensesTable({ expenses, filterMonth, isMonthClosed, onEdit, onEditInstallment }: Props) {
   const [isPending, startTransition] = useTransition()
 
   function handleDelete(id: string) {
@@ -180,7 +181,7 @@ export default function ExpensesTable({ expenses, filterMonth, onEdit, onEditIns
       header: 'פעולות',
       cell: r => (
         <div className="flex gap-1">
-          {r.is_recurring && r._installmentNum > 1 ? (
+          {!isMonthClosed && (r.is_recurring && r._installmentNum > 1 ? (
             <>
               <Button
                 variant="ghost"
@@ -201,8 +202,10 @@ export default function ExpensesTable({ expenses, filterMonth, onEdit, onEditIns
             </>
           ) : (
             <Button variant="ghost" size="sm" onClick={() => onEdit(r)} className="h-7 px-2 text-xs text-muted-foreground hover:text-primary">ערוך</Button>
+          ))}
+          {!isMonthClosed && (
+            <Button variant="ghost" size="sm" onClick={() => handleDelete(r.id)} disabled={isPending} className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive">מחק</Button>
           )}
-          <Button variant="ghost" size="sm" onClick={() => handleDelete(r.id)} disabled={isPending} className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive">מחק</Button>
         </div>
       ),
     },

@@ -42,11 +42,12 @@ type Expense = {
 type Props = {
   categories: Category[]
   expense?: Expense
+  closedMonths: string[]
   onClose: () => void
   onCategoryModalOpen: () => void
 }
 
-export default function ExpenseModal({ categories, expense, onClose, onCategoryModalOpen }: Props) {
+export default function ExpenseModal({ categories, expense, closedMonths, onClose, onCategoryModalOpen }: Props) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState('')
   const [hasInstallments, setHasInstallments] = useState(expense ? expense.installments_total > 1 : false)
@@ -72,6 +73,12 @@ export default function ExpenseModal({ categories, expense, onClose, onCategoryM
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (closedMonths.includes(transactionDate.slice(0, 7))) {
+      const msg = 'לא ניתן לשמור הוצאה לחודש סגור'
+      setError(msg)
+      toast.error(msg)
+      return
+    }
     const formData = new FormData(formRef.current!)
     formData.set('has_installments', hasInstallments ? 'true' : 'false')
     if (!hasInstallments) formData.set('installments_total', '1')

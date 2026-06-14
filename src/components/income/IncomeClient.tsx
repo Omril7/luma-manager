@@ -160,6 +160,7 @@ export default function IncomeClient({ products, incomeRows, closedMonths }: Pro
         <IncomeTable
           rows={incomeRows}
           filterMonth={filterMonth}
+          isMonthClosed={isMonthClosed}
           onEdit={openEdit}
         />
       </div>
@@ -180,6 +181,7 @@ export default function IncomeClient({ products, incomeRows, closedMonths }: Pro
         <IncomeModal
           products={products}
           income={editingIncome}
+          closedMonths={closedMonths}
           onClose={() => setShowIncomeModal(false)}
         />
       )}

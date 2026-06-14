@@ -17,13 +17,13 @@ type IncomeRow = {
   original_price: number; discount_amount: number; final_price: number
   delivery_amount: number; income_date: string; notes: string | null
 }
-type Props = { products: Product[]; income?: IncomeRow; onClose: () => void }
+type Props = { products: Product[]; income?: IncomeRow; closedMonths: string[]; onClose: () => void }
 
 function ils(n: number) {
   return n.toLocaleString('he-IL', { style: 'currency', currency: 'ILS', maximumFractionDigits: 2 })
 }
 
-export default function IncomeModal({ products, income, onClose }: Props) {
+export default function IncomeModal({ products, income, closedMonths, onClose }: Props) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState('')
   const [hasDiscount, setHasDiscount] = useState(income ? income.discount_amount > 0 : false)
@@ -39,6 +39,12 @@ export default function IncomeModal({ products, income, onClose }: Props) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (closedMonths.includes(incomeDate.slice(0, 7))) {
+      const msg = 'לא ניתן לשמור הכנסה לחודש סגור'
+      setError(msg)
+      toast.error(msg)
+      return
+    }
     const formData = new FormData(formRef.current!)
     formData.set('has_discount', hasDiscount ? 'true' : 'false')
     if (!hasDiscount) formData.set('discount_amount', '0')

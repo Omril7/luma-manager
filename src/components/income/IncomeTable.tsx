@@ -24,10 +24,11 @@ type IncomeRow = {
 type Props = {
   rows: IncomeRow[]
   filterMonth: string
+  isMonthClosed: boolean
   onEdit: (row: IncomeRow) => void
 }
 
-export default function IncomeTable({ rows, filterMonth, onEdit }: Props) {
+export default function IncomeTable({ rows, filterMonth, isMonthClosed, onEdit }: Props) {
   const [isPending, startTransition] = useTransition()
 
   function handleDelete(id: string) {
@@ -101,8 +102,12 @@ export default function IncomeTable({ rows, filterMonth, onEdit }: Props) {
       header: 'פעולות',
       cell: r => (
         <div className="flex gap-1">
-          <Button variant="ghost" size="sm" onClick={() => onEdit(r)} className="h-7 px-2 text-xs text-muted-foreground hover:text-primary">ערוך</Button>
-          <Button variant="ghost" size="sm" onClick={() => handleDelete(r.id)} disabled={isPending} className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive">מחק</Button>
+          {!isMonthClosed && (
+            <Button variant="ghost" size="sm" onClick={() => onEdit(r)} className="h-7 px-2 text-xs text-muted-foreground hover:text-primary">ערוך</Button>
+          )}
+          {!isMonthClosed && (
+            <Button variant="ghost" size="sm" onClick={() => handleDelete(r.id)} disabled={isPending} className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive">מחק</Button>
+          )}
         </div>
       ),
     },
