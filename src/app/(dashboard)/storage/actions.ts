@@ -39,7 +39,7 @@ export async function getStorageStats(): Promise<MonthStats[]> {
 
   return Array.from(monthMap.entries())
     .map(([month, counts]) => ({ month, ...counts }))
-    .sort((a, b) => b.month.localeCompare(a.month))
+    .sort((a, b) => a.month.localeCompare(b.month))
 }
 
 type ReceiptForCleanup = {
