@@ -181,21 +181,24 @@ export default function ExpensesTable({ expenses, filterMonth, onEdit, onEditIns
       cell: r => (
         <div className="flex gap-1">
           {r.is_recurring && r._installmentNum > 1 ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onEditInstallment({
-                installmentId: r._installmentId,
-                installmentNumber: r._installmentNum,
-                dueMonth: r._dueMonth,
-                amount: r._installmentAmt,
-                expenseDescription: r.description,
-                receipts: r.receipts.filter(rec => rec.installment_id === r._installmentId),
-              })}
-              className="h-7 px-2 text-xs text-muted-foreground hover:text-primary"
-            >
-              ערוך חודש
-            </Button>
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onEditInstallment({
+                  installmentId: r._installmentId,
+                  installmentNumber: r._installmentNum,
+                  dueMonth: r._dueMonth,
+                  amount: r._installmentAmt,
+                  expenseDescription: r.description,
+                  receipts: r.receipts.filter(rec => rec.installment_id === r._installmentId),
+                })}
+                className="h-7 px-2 text-xs text-muted-foreground hover:text-primary"
+              >
+                ערוך חודש
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => onEdit(r)} className="h-7 px-2 text-xs text-muted-foreground hover:text-primary">ערוך תבנית</Button>
+            </>
           ) : (
             <Button variant="ghost" size="sm" onClick={() => onEdit(r)} className="h-7 px-2 text-xs text-muted-foreground hover:text-primary">ערוך</Button>
           )}
