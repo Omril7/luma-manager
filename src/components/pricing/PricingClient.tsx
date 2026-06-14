@@ -88,7 +88,24 @@ export default function PricingClient({ pricings, defaultHourlyRate }: Props) {
     setShowWizard(true)
   }
 
+  function validateStep(s: number): string | null {
+    if (s === 0 && !wizardName.trim()) return 'יש להזין שם לתמחור'
+    if (s === 1 && (!timeHours || timeHours <= 0)) return 'יש להזין שעות עבודה'
+    if (s === 1 && (!hourlyRate || hourlyRate <= 0)) return 'יש להזין ערך שעה'
+    if (s === 3 && (!profitValue || profitValue <= 0)) return 'יש להזין רווח'
+    return null
+  }
+
+  function handleNext() {
+    const err = validateStep(step)
+    if (err) { setError(err); return }
+    setError('')
+    setStep(s => s + 1)
+  }
+
   function handleSave() {
+    const err = validateStep(3)
+    if (err) { setError(err); return }
     if (!wizardName.trim()) { setError('יש להזין שם לתמחור'); return }
     const input: SavePricingInput = {
       name: wizardName,
@@ -300,14 +317,18 @@ export default function PricingClient({ pricings, defaultHourlyRate }: Props) {
           <div className="flex justify-between pt-2">
             <Button
               variant="outline"
-              onClick={() => step === 0 ? setShowWizard(false) : setStep(s => s - 1)}
+              onClick={() => {
+                setError('')
+                if (step === 0) setShowWizard(false)
+                else setStep(s => s - 1)
+              }}
             >
               {step === 0 ? 'ביטול' : (
                 <><ChevronRight className="h-4 w-4 ml-1" />הקודם</>
               )}
             </Button>
             {step < 3 ? (
-              <Button onClick={() => setStep(s => s + 1)}>
+              <Button onClick={handleNext}>
                 הבא <ChevronLeft className="h-4 w-4 mr-1" />
               </Button>
             ) : (
