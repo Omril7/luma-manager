@@ -132,7 +132,7 @@ export default function ExpensesCharts({ installments, isAnnual, year, month }: 
         </div>
 
         {/* Donut chart */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 w-full">
           <ResponsiveContainer width="100%" height={220}>
             <PieChart>
               <Pie
