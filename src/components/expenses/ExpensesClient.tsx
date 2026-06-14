@@ -1,11 +1,13 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import ExpenseSummaryCards from './ExpenseSummaryCards'
 import ExpensesTable from './ExpensesTable'
 import ExpensesCharts from './ExpensesCharts'
+import { Lock } from 'lucide-react'
 import ExpenseModal from './ExpenseModal'
 import InstallmentModal from './InstallmentModal'
 import CategoryModal from './CategoryModal'
@@ -67,11 +69,12 @@ type Props = {
   allInstallments: Installment[]
   vatRate: number
   hasAccountantEmail: boolean
+  closedMonths: string[]
 }
 
 const MONTH_NAMES = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר']
 
-export default function ExpensesClient({ categories, expenses, allInstallments, vatRate, hasAccountantEmail }: Props) {
+export default function ExpensesClient({ categories, expenses, allInstallments, vatRate, hasAccountantEmail, closedMonths }: Props) {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -83,6 +86,7 @@ export default function ExpensesClient({ categories, expenses, allInstallments, 
   const [editingInstallment, setEditingInstallment] = useState<InstallmentEditTarget | undefined>(undefined)
 
   const filterMonth = `${year}-${String(month).padStart(2, '0')}`
+  const isMonthClosed = closedMonths.includes(filterMonth)
 
   // Installments for the current month (for summary cards)
   const monthInstallments = allInstallments.filter(i => i.due_month.slice(0, 7) === filterMonth)
@@ -177,6 +181,14 @@ export default function ExpensesClient({ categories, expenses, allInstallments, 
         </div>
       </div>
 
+      {/* Closed month banner */}
+      {isMonthClosed && !isAnnual && (
+        <div className="flex items-center gap-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+          <Lock className="h-4 w-4 shrink-0" />
+          <span>חודש זה סגור — לא ניתן להוסיף הוצאות. לפתיחה מחדש יש לגשת לדף <Link href="/dashboard" className="font-semibold underline underline-offset-2 hover:opacity-80">תזרים מזומנים</Link>.</span>
+        </div>
+      )}
+
       {/* Charts */}
       <ExpensesCharts
         installments={allInstallments}
@@ -196,14 +208,16 @@ export default function ExpensesClient({ categories, expenses, allInstallments, 
         />
       </div>
 
-      {/* FAB */}
-      <button
-        onClick={openAdd}
-        className="fixed bottom-8 left-8 bg-primary text-primary-foreground w-14 h-14 rounded-full shadow-lg text-2xl flex items-center justify-center hover:bg-primary/90 transition-colors z-40"
-        title="הוסף הוצאה"
-      >
-        +
-      </button>
+      {/* FAB — hidden when the viewed month is closed */}
+      {!isMonthClosed && (
+        <button
+          onClick={openAdd}
+          className="fixed bottom-8 left-8 bg-primary text-primary-foreground w-14 h-14 rounded-full shadow-lg text-2xl flex items-center justify-center hover:bg-primary/90 transition-colors z-40"
+          title="הוסף הוצאה"
+        >
+          +
+        </button>
+      )}
 
       {/* Modals */}
       {showExpenseModal && (

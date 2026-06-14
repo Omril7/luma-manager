@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition, useRef } from 'react'
-import { createAuthorityPayment, deleteAuthorityPayment, approveMonthClose, updatePaycheckPercent } from '@/app/(dashboard)/dashboard/actions'
+import { createAuthorityPayment, deleteAuthorityPayment, approveMonthClose, updatePaycheckPercent, deleteSnapshot } from '@/app/(dashboard)/dashboard/actions'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -45,6 +45,7 @@ interface MonthRow {
   salary: number
   closing: number
   isLive: boolean
+  isApproved: boolean
 }
 
 interface Props {
@@ -89,6 +90,7 @@ export default function DashboardClient({
   const [paycheckPercent, setPaycheckPercent] = useState(initialPaycheckPercent)
   const [showAddPayment, setShowAddPayment] = useState(false)
   const [confirmClose, setConfirmClose] = useState<{ month: string; closing: number; opening: number } | null>(null)
+  const [confirmDeleteSnapshot, setConfirmDeleteSnapshot] = useState<{ month: string; hasLaterSnapshots: boolean } | null>(null)
   const [isPending, startTransition] = useTransition()
   const [addError, setAddError] = useState('')
   const formRef = useRef<HTMLFormElement>(null)
@@ -96,16 +98,23 @@ export default function DashboardClient({
     const [yr2, mo2] = currentMonth.split('-')
     return { year: Number(yr2), month: Number(mo2) }
   })
+  const [authorityFilterMonth, setAuthorityFilterMonth] = useState<MonthPickerValue>(() => {
+    const [yr2, mo2] = currentMonth.split('-')
+    return { year: Number(yr2), month: Number(mo2) }
+  })
   const [balancePage, setBalancePage] = useState(0)
   const BALANCE_PAGE_SIZE = 6
 
-  const authorityTotal = authorityPayments.reduce((s, p) => s + p.amount, 0)
+  const authorityTotal = authorityPayments
+    .filter(p => p.payment_month.slice(0, 7) === currentMonth)
+    .reduce((s, p) => s + p.amount, 0)
   const grossProfit = monthIncome - monthExpenses
   const salary = grossProfit * (paycheckPercent / 100)
   const monthlyBalance = grossProfit - salary - authorityTotal
 
-  const [yr, mo] = currentMonth.split('-')
-  const currentMonthLabel = `${MONTH_LABELS[mo] ?? mo} ${yr}`
+  const closedMonthSet = new Set(balanceRows.filter(r => r.isApproved).map(r => r.month))
+  const selectedPaymentYM = `${paymentMonth.year}-${String(paymentMonth.month).padStart(2, '0')}`
+  const isAddingToClosedMonth = closedMonthSet.has(selectedPaymentYM)
 
   function handleDeletePayment(id: string) {
     startTransition(async () => {
@@ -151,6 +160,16 @@ export default function DashboardClient({
     })
   }
 
+  function handleDeleteSnapshot() {
+    if (!confirmDeleteSnapshot) return
+    startTransition(async () => {
+      const res = await deleteSnapshot(confirmDeleteSnapshot.month)
+      if (res && 'error' in res && res.error) toast.error(res.error)
+      else toast.success('החודש נפתח מחדש')
+      setConfirmDeleteSnapshot(null)
+    })
+  }
+
   // Authority payments table columns
   const authorityColumns: DataTableColumn<AuthorityPayment>[] = [
     {
@@ -187,15 +206,22 @@ export default function DashboardClient({
     },
   ]
 
-  // Authority payments totals footer row
+  const authorityFilterYM = `${authorityFilterMonth.year}-${String(authorityFilterMonth.month).padStart(2, '0')}`
+  const filteredAuthorityPayments = authorityPayments.filter(p => p.payment_month.slice(0, 7) === authorityFilterYM)
+  const filteredAuthorityTotal = filteredAuthorityPayments.reduce((s, p) => s + p.amount, 0)
+
+  // Authority payments totals footer row (filtered month)
   const authorityFooter = (
     <tr className="font-semibold bg-muted/50">
       <td className="py-2.5">סה&quot;כ</td>
-      <td className="py-2.5">{ils(authorityTotal)}</td>
+      <td className="py-2.5">{ils(filteredAuthorityTotal)}</td>
       <td />
       <td />
     </tr>
   )
+
+  // Months that have approved snapshots (for the "later snapshots" warning)
+  const approvedMonths = balanceRows.filter(r => !r.isLive).map(r => r.month)
 
   // Balance table columns
   const balanceColumns: DataTableColumn<MonthRow>[] = [
@@ -252,16 +278,31 @@ export default function DashboardClient({
       header: '',
       headerClassName: 'w-24',
       cell: row => row.isLive ? (
+        row.month < currentMonth ? (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setConfirmClose({ month: row.month, closing: row.closing, opening: row.opening })}
+            className="text-xs h-7 px-2"
+          >
+            <CheckCircle className="h-3 w-3 ml-1" />
+            סגור חודש
+          </Button>
+        ) : null
+      ) : (
         <Button
           size="sm"
-          variant="outline"
-          onClick={() => setConfirmClose({ month: row.month, closing: row.closing, opening: row.opening })}
-          className="text-xs h-7 px-2"
+          variant="ghost"
+          onClick={() => setConfirmDeleteSnapshot({
+            month: row.month,
+            hasLaterSnapshots: approvedMonths.some(m => m > row.month),
+          })}
+          className="text-xs h-7 px-2 text-muted-foreground hover:text-destructive"
         >
-          <CheckCircle className="h-3 w-3 ml-1" />
-          סגור חודש
+          <Trash2 className="h-3 w-3 ml-1" />
+          פתח מחדש
         </Button>
-      ) : null,
+      ),
     },
   ]
 
@@ -316,24 +357,27 @@ export default function DashboardClient({
       {/* Authority Payments */}
       <Card>
         <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-semibold">תשלומים לרשויות — {currentMonthLabel}</CardTitle>
-            <Button size="sm" onClick={() => setShowAddPayment(true)}>
-              <Plus className="h-4 w-4 ml-1" />
-              הוסף תשלום
-            </Button>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle className="text-base font-semibold">תשלומים לרשויות</CardTitle>
+            <div className="flex items-center gap-2">
+              <MonthPicker value={authorityFilterMonth} onChange={setAuthorityFilterMonth} className="w-36 h-9 text-sm" />
+              <Button size="sm" onClick={() => { setPaymentMonth(authorityFilterMonth); setShowAddPayment(true) }} className="px-6">
+                <Plus className="h-4 w-4 ml-1" />
+                הוסף תשלום
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          {authorityPayments.length === 0 ? (
-            <p className="text-muted-foreground text-sm">אין תשלומים לרשויות החודש</p>
+          {filteredAuthorityPayments.length === 0 ? (
+            <p className="text-muted-foreground text-sm">אין תשלומים לרשויות בחודש זה</p>
           ) : (
             <DataTable
               columns={authorityColumns}
-              data={authorityPayments}
+              data={filteredAuthorityPayments}
               rowKey={row => row.id}
               footerRow={authorityFooter}
-              emptyMessage="אין תשלומים לרשויות החודש"
+              emptyMessage="אין תשלומים לרשויות בחודש זה"
             />
           )}
         </CardContent>
@@ -376,10 +420,15 @@ export default function DashboardClient({
               <Label>הערות (אופציונלי)</Label>
               <Textarea name="notes" rows={2} placeholder="הערה..." />
             </div>
+            {isAddingToClosedMonth && (
+              <p className="text-amber-600 text-sm bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
+                חודש זה סגור — לא ניתן להוסיף תשלום. יש לפתוח את החודש מחדש בטבלת העובר ושב.
+              </p>
+            )}
             {addError && <p className="text-red-500 text-sm">{addError}</p>}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setShowAddPayment(false)}>ביטול</Button>
-              <Button type="submit" disabled={isPending}>שמור</Button>
+              <Button type="submit" disabled={isPending || isAddingToClosedMonth}>שמור</Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -401,6 +450,34 @@ export default function DashboardClient({
           />
         </CardContent>
       </Card>
+
+      {/* Confirm Delete Snapshot Dialog */}
+      <Dialog open={!!confirmDeleteSnapshot} onOpenChange={() => setConfirmDeleteSnapshot(null)}>
+        <DialogContent className="max-w-sm" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>פתיחת חודש מחדש</DialogTitle>
+          </DialogHeader>
+          {confirmDeleteSnapshot && (
+            <div className="space-y-3">
+              <p className="text-foreground">
+                האם לפתוח מחדש את חודש <strong>{monthLabel(confirmDeleteSnapshot.month)}</strong>?
+              </p>
+              <p className="text-sm text-muted-foreground">
+                החודש יחזור למצב שוטף ויחושב מחדש לפי ההוצאות, ההכנסות והתשלומים הקיימים.
+              </p>
+              {confirmDeleteSnapshot.hasLaterSnapshots && (
+                <p className="text-sm text-amber-600 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
+                  שים לב: קיימים חודשים סגורים מאוחרים יותר. יתרת הפתיחה שלהם לא תתעדכן אוטומטית — מומלץ לפתוח גם אותם מחדש (מהחדש לישן).
+                </p>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDeleteSnapshot(null)}>ביטול</Button>
+            <Button variant="destructive" onClick={handleDeleteSnapshot} disabled={isPending}>פתח מחדש</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Confirm Month Close Dialog */}
       <Dialog open={!!confirmClose} onOpenChange={() => setConfirmClose(null)}>

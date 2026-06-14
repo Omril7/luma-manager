@@ -46,14 +46,12 @@ export default async function DashboardPage() {
       .eq('user_id', user.id)
       .gte('income_date', monthStart)
       .lte('income_date', monthEnd),
-    // authority payments this month
+    // all authority payments
     supabase
       .from('authority_payments')
       .select('id, type, amount, payment_month, notes')
       .eq('user_id', user.id)
-      .gte('payment_month', monthStart)
-      .lte('payment_month', monthEnd)
-      .order('created_at'),
+      .order('payment_month', { ascending: false }),
     // all balance snapshots
     supabase
       .from('balance_snapshots')
@@ -150,6 +148,7 @@ export default async function DashboardPage() {
         salary: sal,
         closing: snap.closing_balance,
         isLive: false,
+        isApproved: true,
       }
       runningBalance = snap.closing_balance
       return row
@@ -169,6 +168,7 @@ export default async function DashboardPage() {
       salary: sal,
       closing,
       isLive,
+      isApproved: false,
     }
   })
 

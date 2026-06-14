@@ -77,6 +77,22 @@ export async function approveMonthClose(
   return { success: true }
 }
 
+export async function deleteSnapshot(snapshotMonth: string) {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'לא מחובר' }
+
+  const { error } = await supabase
+    .from('balance_snapshots')
+    .delete()
+    .eq('snapshot_month', snapshotMonth + '-01')
+    .eq('user_id', user.id)
+  if (error) return { error: error.message }
+
+  revalidatePath('/dashboard')
+  return { success: true }
+}
+
 export async function updatePaycheckPercent(percent: number) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()

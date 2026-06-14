@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import Link from 'next/link'
+import { ChevronLeft, ChevronRight, Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import IncomeSummaryCards from './IncomeSummaryCards'
 import IncomeCharts from './IncomeCharts'
@@ -33,11 +34,12 @@ type IncomeRow = {
 type Props = {
   products: Product[]
   incomeRows: IncomeRow[]
+  closedMonths: string[]
 }
 
 const MONTH_NAMES = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר']
 
-export default function IncomeClient({ products, incomeRows }: Props) {
+export default function IncomeClient({ products, incomeRows, closedMonths }: Props) {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -47,6 +49,7 @@ export default function IncomeClient({ products, incomeRows }: Props) {
   const [editingIncome, setEditingIncome] = useState<IncomeRow | undefined>(undefined)
 
   const filterMonth = `${year}-${String(month).padStart(2, '0')}`
+  const isMonthClosed = closedMonths.includes(filterMonth)
   const monthRows = incomeRows.filter(r => r.income_date.slice(0, 7) === filterMonth)
   const annualRows = incomeRows.filter(r => r.income_date.slice(0, 4) === String(year))
 
@@ -132,6 +135,14 @@ export default function IncomeClient({ products, incomeRows }: Props) {
         </div>
       </div>
 
+      {/* Closed month banner */}
+      {isMonthClosed && !isAnnual && (
+        <div className="flex items-center gap-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+          <Lock className="h-4 w-4 shrink-0" />
+          <span>חודש זה סגור — לא ניתן להוסיף הכנסות. לפתיחה מחדש יש לגשת לדף <Link href="/dashboard" className="font-semibold underline underline-offset-2 hover:opacity-80">תזרים מזומנים</Link>.</span>
+        </div>
+      )}
+
       {/* Charts */}
       <IncomeCharts
         rows={incomeRows}
@@ -153,14 +164,16 @@ export default function IncomeClient({ products, incomeRows }: Props) {
         />
       </div>
 
-      {/* FAB */}
-      <button
-        onClick={openAdd}
-        className="fixed bottom-8 left-8 bg-green-600 text-white w-14 h-14 rounded-full shadow-lg text-2xl flex items-center justify-center hover:bg-green-700 transition-colors z-40"
-        title="הוסף הכנסה"
-      >
-        +
-      </button>
+      {/* FAB — hidden when the viewed month is closed */}
+      {!isMonthClosed && (
+        <button
+          onClick={openAdd}
+          className="fixed bottom-8 left-8 bg-green-600 text-white w-14 h-14 rounded-full shadow-lg text-2xl flex items-center justify-center hover:bg-green-700 transition-colors z-40"
+          title="הוסף הכנסה"
+        >
+          +
+        </button>
+      )}
 
       {/* Modals */}
       {showIncomeModal && (

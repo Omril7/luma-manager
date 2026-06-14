@@ -16,6 +16,7 @@ export default async function ExpensesPage() {
     { data: settings },
     { data: expenses },
     { data: allInstallments },
+    { data: snapshots },
   ] = await Promise.all([
     supabase
       .from('expense_categories')
@@ -45,7 +46,14 @@ export default async function ExpensesPage() {
         expenses!inner(is_personal, expense_categories(name, is_vat_recognized))
       `)
       .eq('user_id', user.id),
+    supabase
+      .from('balance_snapshots')
+      .select('snapshot_month')
+      .eq('user_id', user.id)
+      .not('approved_at', 'is', null),
   ])
+
+  const closedMonths = (snapshots ?? []).map(s => s.snapshot_month.slice(0, 7))
 
   return (
     <ExpensesClient
@@ -54,6 +62,7 @@ export default async function ExpensesPage() {
       allInstallments={(allInstallments ?? []) as unknown as Parameters<typeof ExpensesClient>[0]['allInstallments']}
       vatRate={settings?.vat_rate ?? 18}
       hasAccountantEmail={!!settings?.accountant_email}
+      closedMonths={closedMonths}
     />
   )
 }
