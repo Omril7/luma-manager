@@ -45,13 +45,16 @@ export default function IncomeCharts({ rows, isAnnual, year, month }: Props) {
       <div className="bg-card rounded-xl border border-border p-5">
         <h3 className="text-sm font-medium text-muted-foreground mb-4">הכנסות לפי חודש — {year}</h3>
         <ResponsiveContainer width="100%" height={240}>
-          <BarChart data={data} margin={{ top: 22, right: 8, left: 4, bottom: 4 }} style={{ overflow: 'visible' }}>
+          <BarChart data={data} margin={{ top: 22, right: 8, left: 4, bottom: 28 }} style={{ overflow: 'visible' }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
             <XAxis
               dataKey="name"
-              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))', textAnchor: 'start' }}
               axisLine={false}
               tickLine={false}
+              angle={-45}
+              height={60}
+              tickMargin={8}
             />
             <YAxis
               orientation="right"
@@ -88,8 +91,8 @@ export default function IncomeCharts({ rows, isAnnual, year, month }: Props) {
   const daysInMonth = new Date(year, month, 0).getDate()
   const dailyData = Array.from({ length: daysInMonth }, (_, i) => {
     const day = String(i + 1).padStart(2, '0')
-    return { name: String(i + 1), total: byDay[day] ?? 0 }
-  }).reverse()
+    return { day: i + 1, total: byDay[day] ?? 0 }
+  })
 
   return (
     <div className="bg-card rounded-xl border border-border p-5">
@@ -98,11 +101,15 @@ export default function IncomeCharts({ rows, isAnnual, year, month }: Props) {
         <BarChart data={dailyData} margin={{ top: 22, right: 8, left: 4, bottom: 4 }} style={{ overflow: 'visible' }}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
           <XAxis
-            dataKey="name"
+            dataKey="day"
+            type="number"
+            domain={[0, daysInMonth]}
+            ticks={[0, 5, 10, 15, 20, 25, 30].filter(d => d <= daysInMonth)}
+            reversed
             tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
             axisLine={false}
             tickLine={false}
-            interval={4}
+            tickMargin={6}
           />
           <YAxis
             orientation="right"

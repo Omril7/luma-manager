@@ -57,13 +57,16 @@ export default function ExpensesCharts({ installments, isAnnual, year, month }: 
       <div className="bg-card rounded-xl border border-border p-5">
         <h3 className="text-sm font-medium text-muted-foreground mb-4">הוצאות לפי חודש — {year}</h3>
         <ResponsiveContainer width="100%" height={260}>
-          <BarChart data={data} margin={{ top: 22, right: 8, left: 4, bottom: 4 }} style={{ overflow: 'visible' }}>
+          <BarChart data={data} margin={{ top: 22, right: 8, left: 4, bottom: 28 }} style={{ overflow: 'visible' }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
             <XAxis
               dataKey="name"
-              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))', textAnchor: 'start' }}
               axisLine={false}
               tickLine={false}
+              angle={-45}
+              height={60}
+              tickMargin={8}
             />
             <YAxis
               orientation="right"
