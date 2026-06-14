@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition, useRef } from 'react'
-import { createAuthorityPayment, deleteAuthorityPayment, approveMonthClose, updatePaycheckPercent, deleteSnapshot } from '@/app/(dashboard)/dashboard/actions'
+import { createAuthorityPayment, deleteAuthorityPayment, approveMonthClose, deleteSnapshot } from '@/app/(dashboard)/dashboard/actions'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,15 +28,8 @@ interface AuthorityPayment {
   notes: string | null
 }
 
-interface BalanceSnapshot {
-  snapshot_month: string
-  opening_balance: number
-  closing_balance: number
-  approved_at: string | null
-}
-
 interface MonthRow {
-  month: string          // YYYY-MM
+  month: string
   label: string
   opening: number
   income: number
@@ -49,12 +42,9 @@ interface MonthRow {
 }
 
 interface Props {
-  currentMonth: string   // YYYY-MM
-  monthIncome: number
-  monthExpenses: number
+  currentMonth: string
   authorityPayments: AuthorityPayment[]
   paycheckPercent: number
-  snapshots: BalanceSnapshot[]
   balanceRows: MonthRow[]
 }
 
@@ -79,42 +69,52 @@ function monthLabel(ym: string) {
   return `${MONTH_LABELS[month] ?? month} ${year}`
 }
 
+function toMonthPickerValue(ym: string): MonthPickerValue {
+  const [yr, mo] = ym.split('-')
+  return { year: Number(yr), month: Number(mo) }
+}
+
 export default function DashboardClient({
   currentMonth,
-  monthIncome,
-  monthExpenses,
   authorityPayments,
-  paycheckPercent: initialPaycheckPercent,
+  paycheckPercent,
   balanceRows,
 }: Props) {
-  const [paycheckPercent, setPaycheckPercent] = useState(initialPaycheckPercent)
+  const [selectedMonthValue, setSelectedMonthValue] = useState<MonthPickerValue>(
+    () => toMonthPickerValue(currentMonth)
+  )
   const [showAddPayment, setShowAddPayment] = useState(false)
   const [confirmClose, setConfirmClose] = useState<{ month: string; closing: number; opening: number } | null>(null)
   const [confirmDeleteSnapshot, setConfirmDeleteSnapshot] = useState<{ month: string; hasLaterSnapshots: boolean } | null>(null)
   const [isPending, startTransition] = useTransition()
   const [addError, setAddError] = useState('')
   const formRef = useRef<HTMLFormElement>(null)
-  const [paymentMonth, setPaymentMonth] = useState<MonthPickerValue>(() => {
-    const [yr2, mo2] = currentMonth.split('-')
-    return { year: Number(yr2), month: Number(mo2) }
-  })
-  const [authorityFilterMonth, setAuthorityFilterMonth] = useState<MonthPickerValue>(() => {
-    const [yr2, mo2] = currentMonth.split('-')
-    return { year: Number(yr2), month: Number(mo2) }
-  })
+  const [paymentMonth, setPaymentMonth] = useState<MonthPickerValue>(
+    () => toMonthPickerValue(currentMonth)
+  )
   const [balancePage, setBalancePage] = useState(0)
   const BALANCE_PAGE_SIZE = 6
 
-  const authorityTotal = authorityPayments
-    .filter(p => p.payment_month.slice(0, 7) === currentMonth)
-    .reduce((s, p) => s + p.amount, 0)
-  const grossProfit = monthIncome - monthExpenses
-  const salary = grossProfit * (paycheckPercent / 100)
-  const monthlyBalance = grossProfit - salary - authorityTotal
+  const selectedMonth = `${selectedMonthValue.year}-${String(selectedMonthValue.month).padStart(2, '0')}`
+  const selectedRow = balanceRows.find(r => r.month === selectedMonth)
+
+  const displayIncome = selectedRow?.income ?? 0
+  const displayExpenses = selectedRow?.expenses ?? 0
+  const displayGrossProfit = displayIncome - displayExpenses
+  const displaySalary = selectedRow?.salary ?? 0
+  const displayAuthority = selectedRow?.authority ?? 0
+  const displayMonthlyBalance = displayGrossProfit - displaySalary - displayAuthority
+
+  const latestClosing = balanceRows[balanceRows.length - 1]?.closing ?? 0
 
   const closedMonthSet = new Set(balanceRows.filter(r => r.isApproved).map(r => r.month))
   const selectedPaymentYM = `${paymentMonth.year}-${String(paymentMonth.month).padStart(2, '0')}`
   const isAddingToClosedMonth = closedMonthSet.has(selectedPaymentYM)
+
+  const filteredAuthorityPayments = authorityPayments.filter(
+    p => p.payment_month.slice(0, 7) === selectedMonth
+  )
+  const filteredAuthorityTotal = filteredAuthorityPayments.reduce((s, p) => s + p.amount, 0)
 
   function handleDeletePayment(id: string) {
     startTransition(async () => {
@@ -141,12 +141,6 @@ export default function DashboardClient({
     })
   }
 
-  function handlePaycheckBlur() {
-    startTransition(async () => {
-      await updatePaycheckPercent(paycheckPercent)
-    })
-  }
-
   function handleApprove() {
     if (!confirmClose) return
     startTransition(async () => {
@@ -170,7 +164,6 @@ export default function DashboardClient({
     })
   }
 
-  // Authority payments table columns
   const authorityColumns: DataTableColumn<AuthorityPayment>[] = [
     {
       key: 'type',
@@ -206,11 +199,6 @@ export default function DashboardClient({
     },
   ]
 
-  const authorityFilterYM = `${authorityFilterMonth.year}-${String(authorityFilterMonth.month).padStart(2, '0')}`
-  const filteredAuthorityPayments = authorityPayments.filter(p => p.payment_month.slice(0, 7) === authorityFilterYM)
-  const filteredAuthorityTotal = filteredAuthorityPayments.reduce((s, p) => s + p.amount, 0)
-
-  // Authority payments totals footer row (filtered month)
   const authorityFooter = (
     <tr className="font-semibold bg-muted/50">
       <td className="py-2.5">סה&quot;כ</td>
@@ -220,10 +208,8 @@ export default function DashboardClient({
     </tr>
   )
 
-  // Months that have approved snapshots (for the "later snapshots" warning)
-  const approvedMonths = balanceRows.filter(r => !r.isLive).map(r => r.month)
+  const approvedMonths = balanceRows.filter(r => r.isApproved).map(r => r.month)
 
-  // Balance table columns
   const balanceColumns: DataTableColumn<MonthRow>[] = [
     {
       key: 'month',
@@ -313,59 +299,45 @@ export default function DashboardClient({
     onPageChange: setBalancePage,
   }
 
+  const closingRow = confirmClose ? balanceRows.find(r => r.month === confirmClose.month) : null
+
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-bold text-foreground">תזרים מזומנים</h1>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <SummaryCard label="הכנסות החודש" value={ils(monthIncome)} />
-        <SummaryCard label="הוצאות עסקיות" value={ils(monthExpenses)} />
-        <SummaryCard label="רווח גולמי" value={ils(grossProfit)} highlight={grossProfit >= 0 ? 'green' : 'red'} />
-        <SummaryCard label="משכורת לעצמי" value={ils(salary)} />
-        <SummaryCard label="יתרה לעסק" value={ils(monthlyBalance)} highlight={monthlyBalance >= 0 ? 'green' : 'red'} />
+      {/* Header with global month picker */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <h1 className="text-2xl font-bold text-foreground">תזרים מזומנים</h1>
+        <MonthPicker
+          value={selectedMonthValue}
+          onChange={setSelectedMonthValue}
+          className="w-44"
+        />
       </div>
 
-      {/* Salary Control */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-semibold">שכר עצמי</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4 flex-wrap">
-            <Label className="text-sm text-muted-foreground whitespace-nowrap">אחוז מהרווח:</Label>
-            <div className="relative w-20">
-              <Input
-                type="number"
-                min={0}
-                max={100}
-                inputSize="sm"
-                value={paycheckPercent}
-                onChange={e => setPaycheckPercent(Number(e.target.value))}
-                onBlur={handlePaycheckBlur}
-                className="w-full pr-6 text-center"
-              />
-              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground/70 pointer-events-none select-none">%</span>
-            </div>
-            <span className="text-foreground font-medium">
-              משכורת חודשית: <strong>{ils(salary)}</strong>
-            </span>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
+        <SummaryCard label="יתרה שוטפת" value={ils(latestClosing)} highlight={latestClosing >= 0 ? 'green' : 'red'} pinned />
+        <SummaryCard label="הכנסות" month={monthLabel(selectedMonth)} value={ils(displayIncome)} />
+        <SummaryCard label="הוצאות עסקיות" month={monthLabel(selectedMonth)} value={ils(displayExpenses)} />
+        <SummaryCard label="רווח גולמי" month={monthLabel(selectedMonth)} value={ils(displayGrossProfit)} highlight={displayGrossProfit >= 0 ? 'green' : 'red'} />
+        <SummaryCard label="משכורת לעצמי" month={monthLabel(selectedMonth)} value={ils(displaySalary)} />
+        <SummaryCard label="יתרה לעסק" month={monthLabel(selectedMonth)} value={ils(displayMonthlyBalance)} highlight={displayMonthlyBalance >= 0 ? 'green' : 'red'} />
+      </div>
 
       {/* Authority Payments */}
       <Card>
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <CardTitle className="text-base font-semibold">תשלומים לרשויות</CardTitle>
-            <div className="flex items-center gap-2">
-              <MonthPicker value={authorityFilterMonth} onChange={setAuthorityFilterMonth} className="w-36 h-9 text-sm" />
-              <Button size="sm" onClick={() => { setPaymentMonth(authorityFilterMonth); setShowAddPayment(true) }} className="px-6">
-                <Plus className="h-4 w-4 ml-1" />
-                הוסף תשלום
-              </Button>
-            </div>
+            <CardTitle className="text-base font-semibold">
+              תשלומים לרשויות — {monthLabel(selectedMonth)}
+            </CardTitle>
+            <Button
+              size="sm"
+              onClick={() => { setPaymentMonth(selectedMonthValue); setShowAddPayment(true) }}
+              className="px-6"
+            >
+              <Plus className="h-4 w-4 ml-1" />
+              הוסף תשלום
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -444,7 +416,7 @@ export default function DashboardClient({
             columns={balanceColumns}
             data={balanceRows}
             rowKey={row => row.month}
-            rowClassName={row => row.isLive ? 'bg-primary/5 font-medium' : ''}
+            rowClassName={row => row.month === selectedMonth ? 'bg-primary/5 font-medium' : ''}
             pagination={balancePagination}
             emptyMessage="אין נתוני יתרה להצגה"
           />
@@ -490,9 +462,18 @@ export default function DashboardClient({
               <p className="text-foreground">
                 האם לסגור את חודש <strong>{monthLabel(confirmClose.month)}</strong>?
               </p>
-              <p className="text-foreground">
-                היתרה הסופית תהיה: <strong className={confirmClose.closing >= 0 ? 'text-green-700' : 'text-red-600'}>{ils(confirmClose.closing)}</strong>
-              </p>
+              <div className="text-sm text-muted-foreground bg-muted/50 rounded-lg px-3 py-2.5 space-y-1">
+                <div className="flex justify-between">
+                  <span>משכורת ({paycheckPercent}% מהרווח הגולמי)</span>
+                  <span className="font-medium text-foreground">{ils(closingRow?.salary ?? 0)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>יתרה סופית</span>
+                  <span className={`font-semibold ${confirmClose.closing >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                    {ils(confirmClose.closing)}
+                  </span>
+                </div>
+              </div>
               <p className="text-xs text-muted-foreground">פעולה זו תנעל את נתוני החודש.</p>
             </div>
           )}
@@ -506,12 +487,13 @@ export default function DashboardClient({
   )
 }
 
-function SummaryCard({ label, value, highlight }: { label: string; value: string; highlight?: 'green' | 'red' }) {
+function SummaryCard({ label, month, value, highlight, pinned }: { label: string; month?: string; value: string; highlight?: 'green' | 'red'; pinned?: boolean }) {
   return (
-    <Card>
-      <CardContent className="p-4 space-y-1">
+    <Card className={pinned ? 'border-primary/40 bg-primary/5' : ''}>
+      <CardContent className="p-4 space-y-0.5">
         <p className="text-xs text-muted-foreground">{label}</p>
-        <p className={`text-xl font-bold ${highlight === 'green' ? 'text-green-700 dark:text-green-400' : highlight === 'red' ? 'text-red-600 dark:text-red-400' : 'text-foreground'}`}>
+        {month && <p className="text-xs text-muted-foreground/60">{month}</p>}
+        <p className={`text-xl font-bold pt-0.5 ${highlight === 'green' ? 'text-green-700 dark:text-green-400' : highlight === 'red' ? 'text-red-600 dark:text-red-400' : 'text-foreground'}`}>
           {value}
         </p>
       </CardContent>

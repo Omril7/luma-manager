@@ -6,9 +6,6 @@ function toYM(dateStr: string) {
   return dateStr.slice(0, 7) // YYYY-MM
 }
 
-function firstOfMonth(ym: string) {
-  return ym + '-01'
-}
 
 export default async function DashboardPage() {
   const supabase = createClient()
@@ -17,13 +14,9 @@ export default async function DashboardPage() {
 
   const now = new Date()
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-  const monthStart = firstOfMonth(currentMonth)
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
 
   const [
     { data: settings },
-    { data: installments },
-    { data: incomeRows },
     { data: authorityPayments },
     { data: snapshots },
     { data: allInstallments },
@@ -31,21 +24,6 @@ export default async function DashboardPage() {
     { data: allAuthority },
   ] = await Promise.all([
     supabase.from('settings').select('paycheck_percent, opening_balance').eq('user_id', user.id).single(),
-    // current month business expenses
-    supabase
-      .from('expense_installments')
-      .select('amount, expenses!inner(is_personal, user_id)')
-      .eq('expenses.user_id', user.id)
-      .eq('expenses.is_personal', false)
-      .gte('due_month', monthStart)
-      .lte('due_month', monthEnd),
-    // current month income
-    supabase
-      .from('income')
-      .select('final_price')
-      .eq('user_id', user.id)
-      .gte('income_date', monthStart)
-      .lte('income_date', monthEnd),
     // all authority payments
     supabase
       .from('authority_payments')
@@ -78,9 +56,6 @@ export default async function DashboardPage() {
 
   const paycheckPercent = settings?.paycheck_percent ?? 30
   const openingBalance = settings?.opening_balance ?? 0
-
-  const monthIncome = (incomeRows ?? []).reduce((s, r) => s + r.final_price, 0)
-  const monthExpenses = (installments ?? []).reduce((s, r) => s + r.amount, 0)
 
   // Build running balance rows for the last 12 months + current
   const snapshotMap = new Map<string, typeof snapshots extends (infer T)[] | null ? T : never>()
@@ -175,11 +150,8 @@ export default async function DashboardPage() {
   return (
     <DashboardClient
       currentMonth={currentMonth}
-      monthIncome={monthIncome}
-      monthExpenses={monthExpenses}
       authorityPayments={(authorityPayments ?? []) as { id: string; type: string; amount: number; payment_month: string; notes: string | null }[]}
       paycheckPercent={paycheckPercent}
-      snapshots={(snapshots ?? []) as { snapshot_month: string; opening_balance: number; closing_balance: number; approved_at: string | null }[]}
       balanceRows={balanceRows}
     />
   )
