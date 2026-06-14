@@ -33,7 +33,6 @@ function ProgressBar({ pct, className }: { pct: number; className?: string }) {
 function CloudinaryUsageCard({ usage }: { usage: CloudinaryUsage }) {
   const hasStorageLimit = usage.storage_limit > 0
   const storagePct = hasStorageLimit ? (usage.storage_bytes / usage.storage_limit) * 100 : 0
-  const storagePctColor = storagePct >= 90 ? 'text-red-500' : storagePct >= 70 ? 'text-amber-500' : 'text-muted-foreground'
 
   const hasCredits = usage.credits_limit > 0
   const creditsPct = hasCredits ? (usage.credits_used / usage.credits_limit) * 100 : 0
