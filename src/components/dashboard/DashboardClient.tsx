@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { createAuthorityPayment, deleteAuthorityPayment, approveMonthClose, deleteSnapshot } from '@/app/(dashboard)/dashboard/actions'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -80,6 +81,7 @@ export default function DashboardClient({
   paycheckPercent,
   balanceRows,
 }: Props) {
+  const router = useRouter()
   const [selectedMonthValue, setSelectedMonthValue] = useState<MonthPickerValue>(
     () => toMonthPickerValue(currentMonth)
   )
@@ -149,6 +151,7 @@ export default function DashboardClient({
         toast.error(res.error)
       } else {
         toast.success('החודש נסגר בהצלחה')
+        router.refresh()
       }
       setConfirmClose(null)
     })
@@ -159,7 +162,10 @@ export default function DashboardClient({
     startTransition(async () => {
       const res = await deleteSnapshot(confirmDeleteSnapshot.month)
       if (res && 'error' in res && res.error) toast.error(res.error)
-      else toast.success('החודש נפתח מחדש')
+      else {
+        toast.success('החודש נפתח מחדש')
+        router.refresh()
+      }
       setConfirmDeleteSnapshot(null)
     })
   }
@@ -263,32 +269,38 @@ export default function DashboardClient({
       key: 'actions',
       header: '',
       headerClassName: 'w-24',
-      cell: row => row.isLive ? (
-        row.month < currentMonth ? (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setConfirmClose({ month: row.month, closing: row.closing, opening: row.opening })}
-            className="text-xs h-7 px-2"
-          >
-            <CheckCircle className="h-3 w-3 ml-1" />
-            סגור חודש
-          </Button>
-        ) : null
-      ) : (
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => setConfirmDeleteSnapshot({
-            month: row.month,
-            hasLaterSnapshots: approvedMonths.some(m => m > row.month),
-          })}
-          className="text-xs h-7 px-2 text-muted-foreground hover:text-destructive"
-        >
-          <Trash2 className="h-3 w-3 ml-1" />
-          פתח מחדש
-        </Button>
-      ),
+      cell: row => {
+        if (row.isApproved) {
+          return (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setConfirmDeleteSnapshot({
+                month: row.month,
+                hasLaterSnapshots: approvedMonths.some(m => m > row.month),
+              })}
+              className="text-xs h-7 px-2 text-muted-foreground hover:text-destructive"
+            >
+              <Trash2 className="h-3 w-3 ml-1" />
+              פתח מחדש
+            </Button>
+          )
+        }
+        if (row.month < currentMonth) {
+          return (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setConfirmClose({ month: row.month, closing: row.closing, opening: row.opening })}
+              className="text-xs h-7 px-2"
+            >
+              <CheckCircle className="h-3 w-3 ml-1" />
+              סגור חודש
+            </Button>
+          )
+        }
+        return null
+      },
     },
   ]
 
