@@ -6,7 +6,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Menu, X, TrendingUp, Receipt, DollarSign, CalendarDays, Tag, Settings, LogOut, Archive } from 'lucide-react'
+import { Menu, X, TrendingUp, Receipt, DollarSign, CalendarDays, Tag, Settings, LogOut, Archive, FileText } from 'lucide-react'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 
 const navItems = [
@@ -15,6 +15,7 @@ const navItems = [
   { href: '/income', label: 'הכנסות', Icon: DollarSign },
   { href: '/calendar', label: 'יומן', Icon: CalendarDays },
   { href: '/pricing', label: 'תמחור', Icon: Tag },
+  { href: '/vat-report', label: 'דוח מע"מ', Icon: FileText },
   { href: '/storage', label: 'איחסון', Icon: Archive },
   { href: '/settings', label: 'הגדרות', Icon: Settings },
 ]
@@ -94,15 +95,15 @@ export function Sidebar() {
 
       {/* Mobile topbar */}
       <div className="md:hidden fixed top-0 right-0 left-0 z-40 flex items-center justify-between px-4 h-14 sidebar-skeu border-b border-white/10">
-        <h1 className="text-sm font-bold text-white">LUMA</h1>
         <div className="flex items-center gap-1">
-          <div className="text-slate-300 [&_button]:text-slate-300 [&_button:hover]:text-white [&_button:hover]:bg-white/10">
-            <ThemeToggle />
-          </div>
           <button onClick={() => setOpen(v => !v)} className="p-2 text-slate-300 hover:text-white transition-colors rounded-lg hover:bg-white/10">
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
+          <div className="text-slate-300 [&_button]:text-slate-300 [&_button:hover]:text-white [&_button:hover]:bg-white/10">
+            <ThemeToggle />
+          </div>
         </div>
+        <h1 className="text-sm font-bold text-white">LUMA</h1>
       </div>
 
       {/* Mobile drawer */}
