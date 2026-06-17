@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { MonthPicker, type MonthPickerValue } from '@/components/ui/month-picker'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DataTable, type DataTableColumn, type DataTablePagination } from '@/components/ui/data-table'
-import { Trash2, Plus, CheckCircle } from 'lucide-react'
+import { Trash2, Plus, CheckCircle, ChevronRight, ChevronLeft } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+} from 'recharts'
 
 interface AuthorityPayment {
   id: string
@@ -96,6 +99,8 @@ export default function DashboardClient({
   )
   const [balancePage, setBalancePage] = useState(0)
   const BALANCE_PAGE_SIZE = 6
+  const currentYear = new Date().getFullYear()
+  const [chartYear, setChartYear] = useState(currentYear)
 
   const selectedMonth = `${selectedMonthValue.year}-${String(selectedMonthValue.month).padStart(2, '0')}`
   const selectedRow = balanceRows.find(r => r.month === selectedMonth)
@@ -117,6 +122,20 @@ export default function DashboardClient({
     p => p.payment_month.slice(0, 7) === selectedMonth
   )
   const filteredAuthorityTotal = filteredAuthorityPayments.reduce((s, p) => s + p.amount, 0)
+
+  const availableYears = Array.from(new Set(balanceRows.map(r => Number(r.month.slice(0, 4))))).sort()
+  const minYear = availableYears[0] ?? currentYear
+  const maxYear = availableYears[availableYears.length - 1] ?? currentYear
+
+  const chartData = Array.from({ length: 12 }, (_, i) => {
+    const m = String(i + 1).padStart(2, '0')
+    const key = `${chartYear}-${m}`
+    const row = balanceRows.find(r => r.month === key)
+    const income = row?.income ?? null
+    const expenses = row?.expenses ?? null
+    const profit = income !== null && expenses !== null ? income - expenses : null
+    return { name: MONTH_LABELS[m], income, expenses, profit }
+  })
 
   function handleDeletePayment(id: string) {
     startTransition(async () => {
@@ -417,6 +436,114 @@ export default function DashboardClient({
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Yearly Cash Flow Chart */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle className="text-base font-semibold">תזרים שנתי</CardTitle>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0"
+                onClick={() => setChartYear(y => Math.max(minYear, y - 1))}
+                disabled={chartYear <= minYear}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <span className="text-sm font-medium w-12 text-center">{chartYear}</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0"
+                onClick={() => setChartYear(y => Math.min(maxYear, y + 1))}
+                disabled={chartYear >= maxYear}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-2">
+          <div dir="ltr">
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={chartData} margin={{ top: 8, right: 8, left: 16, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))', textAnchor: 'start' }}
+                  axisLine={false}
+                  tickLine={false}
+                  reversed
+                  angle={-45}
+                  height={72}
+                  tickMargin={25}
+                />
+                <YAxis
+                  orientation="right"
+                  tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={v => `₪${(v / 1000).toFixed(0)}k`}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '10px',
+                    fontSize: 12,
+                    direction: 'rtl',
+                    color: 'hsl(var(--foreground))',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                    padding: '8px 12px',
+                  }}
+                  formatter={(value, name) => {
+                    const labels: Record<string, string> = { income: 'הכנסות', expenses: 'הוצאות', profit: 'רווח' }
+                    const n = typeof value === 'number' ? value : null
+                    return [n !== null ? ils(n) : '—', labels[String(name)] ?? String(name)]
+                  }}
+                  labelStyle={{ fontWeight: 600, marginBottom: 4 }}
+                />
+                <Legend
+                  formatter={(value: string) => {
+                    const labels: Record<string, string> = { income: 'הכנסות', expenses: 'הוצאות', profit: 'רווח' }
+                    return <span style={{ fontSize: 12, color: 'hsl(var(--foreground))' }}>{labels[value] ?? value}</span>
+                  }}
+                />
+                <Line
+                  type="linear"
+                  dataKey="income"
+                  stroke="#15803d"
+                  strokeWidth={2}
+                  dot={{ r: 3, fill: '#15803d', strokeWidth: 0 }}
+                  activeDot={{ r: 5 }}
+                  connectNulls={false}
+                />
+                <Line
+                  type="linear"
+                  dataKey="expenses"
+                  stroke="#dc2626"
+                  strokeWidth={2}
+                  dot={{ r: 3, fill: '#dc2626', strokeWidth: 0 }}
+                  activeDot={{ r: 5 }}
+                  connectNulls={false}
+                />
+                <Line
+                  type="linear"
+                  dataKey="profit"
+                  stroke="#3d6ba3"
+                  strokeWidth={2}
+                  strokeDasharray="5 3"
+                  dot={{ r: 3, fill: '#3d6ba3', strokeWidth: 0 }}
+                  activeDot={{ r: 5 }}
+                  connectNulls={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Running Balance Table */}
       <Card>
