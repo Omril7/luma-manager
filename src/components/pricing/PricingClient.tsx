@@ -1,12 +1,12 @@
 'use client'
 
 import { useState, useTransition, Fragment } from 'react'
-import { savePricing, deletePricing, SavePricingInput } from '@/app/(dashboard)/pricing/actions'
+import { savePricing, SavePricingInput } from '@/app/(dashboard)/pricing/actions'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Plus, Trash2, ChevronRight, ChevronLeft, Check } from 'lucide-react'
+import { ChevronRight, ChevronLeft, Check, Plus, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   Dialog,
@@ -14,6 +14,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import PricingHistoryPanel from '@/components/pricing/PricingHistoryPanel'
+import MaterialsPanel, { type MaterialCategory, type Material } from '@/components/pricing/MaterialsPanel'
 
 interface PricingRow {
   id: string
@@ -31,6 +33,8 @@ interface PricingRow {
 interface Props {
   pricings: PricingRow[]
   defaultHourlyRate: number
+  materialCategories: MaterialCategory[]
+  materials: Material[]
 }
 
 interface Part {
@@ -38,24 +42,14 @@ interface Part {
   price: number
 }
 
-function ils(n: number) {
-  return n.toLocaleString('he-IL', { style: 'currency', currency: 'ILS', maximumFractionDigits: 0 })
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('he-IL')
-}
-
 const STEPS = ['חומרי גלם', 'עבודה', 'הוצאות נלוות', 'רווח']
 
-export default function PricingClient({ pricings, defaultHourlyRate }: Props) {
+export default function PricingClient({ pricings, defaultHourlyRate, materialCategories, materials }: Props) {
   const [showWizard, setShowWizard] = useState(false)
-  const [detailId, setDetailId] = useState<string | null>(null)
   const [step, setStep] = useState(0)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState('')
 
-  // Wizard state
   const [wizardName, setWizardName] = useState('')
   const [parts, setParts] = useState<Part[]>([{ name: '', price: 0 }])
   const [hourlyRate, setHourlyRate] = useState(defaultHourlyRate)
@@ -129,106 +123,14 @@ export default function PricingClient({ pricings, defaultHourlyRate }: Props) {
     })
   }
 
-  function handleDelete(id: string) {
-    if (!confirm('למחוק תמחור זה?')) return
-    startTransition(async () => {
-      const res = await deletePricing(id)
-      if (res && 'error' in res && res.error) toast.error(res.error)
-      else toast.success('תמחור נמחק')
-    })
-  }
-
-  const detailPricing = pricings.find(p => p.id === detailId)
-
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">תמחור מוצרים</h1>
-        <Button onClick={openWizard}>
-          <Plus className="h-4 w-4 ml-1" />
-          תמחור חדש
-        </Button>
+      <h1 className="text-2xl font-bold text-foreground">תמחור מוצרים</h1>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+        <PricingHistoryPanel pricings={pricings} onNewPricing={openWizard} />
+        <MaterialsPanel categories={materialCategories} materials={materials} />
       </div>
-
-      {/* Pricing History List */}
-      {pricings.length === 0 ? (
-        <div className="bg-card rounded-lg border border-border p-10 text-center text-muted-foreground">
-          אין תמחורים שמורים עדיין
-        </div>
-      ) : (
-        <div className="bg-card rounded-lg border border-border divide-y divide-border">
-          {pricings.map(p => (
-            <div key={p.id} className="flex items-center justify-between p-4">
-              <div
-                className="flex-1 cursor-pointer hover:text-blue-600"
-                onClick={() => setDetailId(p.id)}
-              >
-                <p className="font-medium">{p.name}</p>
-                <p className="text-sm text-gray-500">{formatDate(p.created_at)}</p>
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="text-lg font-bold text-green-700">
-                  {p.suggested_price != null ? ils(p.suggested_price) : '—'}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDelete(p.id)}
-                  disabled={isPending}
-                  className="text-red-500 hover:text-red-700"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Detail Modal */}
-      <Dialog open={!!detailId} onOpenChange={() => setDetailId(null)}>
-        <DialogContent className="max-w-md" dir="rtl">
-          <DialogHeader>
-            <DialogTitle>{detailPricing?.name}</DialogTitle>
-          </DialogHeader>
-          {detailPricing && (
-            <div className="space-y-3 text-sm">
-              {detailPricing.pricing_parts.length > 0 && (
-                <div>
-                  <p className="font-semibold mb-1">חומרי גלם</p>
-                  <table className="w-full">
-                    <tbody>
-                      {detailPricing.pricing_parts.map(part => (
-                        <tr key={part.id}>
-                          <td className="py-0.5">{part.name}</td>
-                          <td className="py-0.5 text-left">{ils(part.price)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-2 border-t pt-2">
-                <span className="text-muted-foreground">שעות עבודה</span><span>{detailPricing.time_hours} ש׳</span>
-                <span className="text-muted-foreground">ערך שעה</span><span>{ils(detailPricing.hourly_rate)}</span>
-                <span className="text-muted-foreground">הוצאות נלוות/שעה</span><span>{ils(detailPricing.overhead_per_hour)}</span>
-                <span className="text-muted-foreground">רווח</span>
-                <span>
-                  {detailPricing.profit_type === 'percent'
-                    ? `${detailPricing.profit_value}%`
-                    : ils(detailPricing.profit_value)}
-                </span>
-              </div>
-              <div className="border-t pt-2 flex justify-between font-semibold text-base">
-                <span>מחיר מומלץ</span>
-                <span className="text-green-700">
-                  {detailPricing.suggested_price != null ? ils(detailPricing.suggested_price) : '—'}
-                </span>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* Wizard Modal */}
       <Dialog open={showWizard} onOpenChange={v => { if (!v) setShowWizard(false) }}>
@@ -237,24 +139,23 @@ export default function PricingClient({ pricings, defaultHourlyRate }: Props) {
             <DialogTitle>תמחור חדש</DialogTitle>
           </DialogHeader>
 
-          {/* Step indicator */}
           <div className="flex items-start mb-5">
             {STEPS.map((s, i) => (
               <Fragment key={s}>
                 <div className="flex flex-col items-center gap-1.5 shrink-0">
                   <div className={cn(
                     'w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all duration-200',
-                    i < step  && 'bg-primary border-primary text-primary-foreground',
+                    i < step   && 'bg-primary border-primary text-primary-foreground',
                     i === step && 'bg-primary border-primary text-primary-foreground ring-4 ring-primary/20',
-                    i > step  && 'bg-background border-border text-muted-foreground',
+                    i > step   && 'bg-background border-border text-muted-foreground',
                   )}>
                     {i < step ? <Check className="h-3.5 w-3.5" /> : i + 1}
                   </div>
                   <span className={cn(
                     'text-[11px] text-center leading-tight max-w-[64px]',
-                    i < step  && 'text-primary',
+                    i < step   && 'text-primary',
                     i === step && 'font-semibold text-foreground',
-                    i > step  && 'text-muted-foreground',
+                    i > step   && 'text-muted-foreground',
                   )}>
                     {s}
                   </span>
@@ -323,9 +224,7 @@ export default function PricingClient({ pricings, defaultHourlyRate }: Props) {
                 else setStep(s => s - 1)
               }}
             >
-              {step === 0 ? 'ביטול' : (
-                <><ChevronRight className="h-4 w-4 ml-1" />הקודם</>
-              )}
+              {step === 0 ? 'ביטול' : <><ChevronRight className="h-4 w-4 ml-1" />הקודם</>}
             </Button>
             {step < 3 ? (
               <Button onClick={handleNext}>
@@ -517,7 +416,6 @@ function Step4({
         </div>
       </div>
 
-      {/* Price breakdown card */}
       <div className="bg-muted/50 rounded-lg p-4 space-y-1 text-sm">
         <div className="flex justify-between text-muted-foreground">
           <span>חומרי גלם</span><span>{materialsTotal.toLocaleString('he-IL')} ₪</span>

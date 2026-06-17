@@ -171,7 +171,7 @@ export function DataTable<T>({
     : sorted
 
   const pagination$ = pagination && totalPages > 1 ? (
-    <div className="flex items-center justify-between pt-2 border-t border-border">
+    <div className="flex items-center justify-between m-1 pt-2 border-t border-border">
       <span className="text-xs text-muted-foreground tabular-nums">
         עמוד {pagination.page + 1} מתוך {totalPages}
         <span className="text-muted-foreground/60 mr-1">({pagination.total} שורות)</span>

@@ -12,6 +12,57 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      material_categories: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      materials: {
+        Row: {
+          id: string
+          user_id: string
+          category_id: string
+          name: string
+          unit: string
+          price: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          category_id: string
+          name: string
+          unit: string
+          price: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          category_id?: string
+          name?: string
+          unit?: string
+          price?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
       settings: {
         Row: {
           id: string
