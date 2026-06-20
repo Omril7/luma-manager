@@ -50,7 +50,7 @@ export default async function DashboardPage() {
     // all authority payments for running balance
     supabase
       .from('authority_payments')
-      .select('amount, payment_month')
+      .select('amount, payment_month, type')
       .eq('user_id', user.id),
   ])
 
@@ -76,10 +76,14 @@ export default async function DashboardPage() {
     expensesByMonth.set(ym, (expensesByMonth.get(ym) ?? 0) + (r as { amount: number }).amount)
   }
 
-  const authorityByMonth = new Map<string, number>()
+  type AuthorityBreakdown = { income_tax: number; social_security: number; vat: number }
+  const authorityByMonth = new Map<string, AuthorityBreakdown>()
   for (const r of allAuthority ?? []) {
     const ym = toYM(r.payment_month)
-    authorityByMonth.set(ym, (authorityByMonth.get(ym) ?? 0) + r.amount)
+    const existing = authorityByMonth.get(ym) ?? { income_tax: 0, social_security: 0, vat: 0 }
+    const type = r.type as keyof AuthorityBreakdown
+    if (type in existing) existing[type] += r.amount
+    authorityByMonth.set(ym, existing)
   }
 
   // Collect all months that have data, plus current
@@ -107,7 +111,8 @@ export default async function DashboardPage() {
     const snap = snapshotMap.get(month)
     const income = incomeByMonth.get(month) ?? 0
     const expenses = expensesByMonth.get(month) ?? 0
-    const authority = authorityByMonth.get(month) ?? 0
+    const authorityBreakdown = authorityByMonth.get(month) ?? { income_tax: 0, social_security: 0, vat: 0 }
+    const authority = authorityBreakdown.income_tax + authorityBreakdown.social_security + authorityBreakdown.vat
     const grossP = income - expenses
     const sal = grossP * (paycheckPercent / 100)
     const isLive = month === currentMonth && !snap?.approved_at
@@ -120,6 +125,7 @@ export default async function DashboardPage() {
         income,
         expenses,
         authority,
+        ...authorityBreakdown,
         salary: sal,
         closing: snap.closing_balance,
         isLive: false,
@@ -140,6 +146,7 @@ export default async function DashboardPage() {
       income,
       expenses,
       authority,
+      ...authorityBreakdown,
       salary: sal,
       closing,
       isLive,

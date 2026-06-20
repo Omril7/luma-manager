@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useRef } from 'react'
+import { useState, useTransition, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createAuthorityPayment, deleteAuthorityPayment, approveMonthClose, deleteSnapshot } from '@/app/(dashboard)/dashboard/actions'
 import { toast } from 'sonner'
@@ -39,6 +39,9 @@ interface MonthRow {
   income: number
   expenses: number
   authority: number
+  income_tax: number
+  social_security: number
+  vat: number
   salary: number
   closing: number
   isLive: boolean
@@ -264,10 +267,22 @@ export default function DashboardClient({
       cell: row => ils(row.expenses),
     },
     {
-      key: 'authority',
-      header: 'רשויות',
+      key: 'income_tax',
+      header: 'מס הכנסה',
       className: 'text-orange-600',
-      cell: row => ils(row.authority),
+      cell: row => ils(row.income_tax),
+    },
+    {
+      key: 'social_security',
+      header: 'ביטוח לאומי',
+      className: 'text-orange-600',
+      cell: row => ils(row.social_security),
+    },
+    {
+      key: 'vat',
+      header: 'מע"מ',
+      className: 'text-orange-600',
+      cell: row => ils(row.vat),
     },
     {
       key: 'salary',
@@ -330,6 +345,211 @@ export default function DashboardClient({
     onPageChange: setBalancePage,
   }
 
+  const FORECAST_SOURCE_MONTHS = 12
+  const forecastSourceCount = Math.min(FORECAST_SOURCE_MONTHS, balanceRows.length)
+
+  const forecastRows = useMemo(() => {
+    const source = balanceRows.slice(-forecastSourceCount)
+    if (source.length === 0) return []
+
+    // ---- helpers -------------------------------------------------------
+
+    /** Simple linear regression (least squares) over y-values indexed 0..n-1.
+     *  Returns a function that evaluates the fitted line at an arbitrary x. */
+    function linearTrend(values: number[]): (x: number) => number {
+      const n = values.length
+      if (n < 2) return () => values[0] ?? 0
+      const xMean = (n - 1) / 2
+      const yMean = values.reduce((s, v) => s + v, 0) / n
+      let num = 0, den = 0
+      for (let i = 0; i < n; i++) {
+        num += (i - xMean) * (values[i] - yMean)
+        den += (i - xMean) * (i - xMean)
+      }
+      const slope = den === 0 ? 0 : num / den
+      const intercept = yMean - slope * xMean
+      return (x: number) => intercept + slope * x
+    }
+
+    /** Recency-weighted average — later months count more (linear ramp). */
+    function weightedAvg(values: number[]): number {
+      const n = values.length
+      if (n === 0) return 0
+      let wSum = 0, vSum = 0
+      for (let i = 0; i < n; i++) {
+        const w = i + 1 // 1, 2, 3, ... n — most recent gets highest weight
+        wSum += w
+        vSum += w * values[i]
+      }
+      return vSum / wSum
+    }
+
+    /** Plain mean. */
+    function mean(values: number[]): number {
+      return values.length === 0 ? 0 : values.reduce((s, v) => s + v, 0) / values.length
+    }
+
+    /** Pearson correlation between values[i] and values[i - lag], for detecting cycles. */
+    function autocorrelation(values: number[], lag: number): number {
+      const n = values.length
+      if (n <= lag + 1) return 0
+      const a = values.slice(lag)
+      const b = values.slice(0, n - lag)
+      const aMean = mean(a), bMean = mean(b)
+      let num = 0, denA = 0, denB = 0
+      for (let i = 0; i < a.length; i++) {
+        num += (a[i] - aMean) * (b[i] - bMean)
+        denA += (a[i] - aMean) ** 2
+        denB += (b[i] - bMean) ** 2
+      }
+      const den = Math.sqrt(denA * denB)
+      return den === 0 ? 0 : num / den
+    }
+
+    /**
+     * Forecast a single future point (`stepsAhead` months past the source window)
+     * for a "smooth" series like income/expenses, by blending:
+     *  - a linear trend fit over the whole source window (captures drift)
+     *  - a recency-weighted average (captures recent level shifts)
+     *  - a seasonal anchor: same calendar month last year, if enough history exists
+     */
+    function forecastSmooth(values: number[], stepsAhead: number, seasonalValue: number | null): number {
+      const n = values.length
+      const trendFn = linearTrend(values)
+      const trendEstimate = trendFn(n - 1 + stepsAhead)
+      const recencyEstimate = weightedAvg(values)
+
+      // Blend trend + recency. Scale trend weight up with data length:
+      // 2 pts → 0 (pure recency), 10+ pts → 0.5 (equal blend).
+      const trendWeight = Math.min(0.5, (n - 2) / 8)
+      let estimate = trendEstimate * trendWeight + recencyEstimate * (1 - trendWeight)
+
+      // If we have a same-month-last-year data point, nudge the estimate toward it.
+      // Modest weight: one seasonal data point shouldn't dominate a 12-month trend.
+      if (seasonalValue !== null) {
+        estimate = estimate * 0.7 + seasonalValue * 0.3
+      }
+      return estimate
+    }
+
+    /**
+     * Forecast a single future point for a "lumpy/cyclical" series (taxes, VAT, social security),
+     * which often arrive on a 2 or 3 month cycle rather than smoothly every month.
+     * Detects the dominant cycle via autocorrelation; if found, projects from the matching
+     * position in the cycle. Otherwise falls back to a recency-weighted average.
+     */
+    function forecastCyclical(values: number[], stepsAhead: number): number {
+      const n = values.length
+      if (n < 4) return weightedAvg(values)
+
+      const candidateLags = [2, 3]
+      let bestLag = 0
+      let bestScore = 0.35 // minimum correlation to trust a cycle over a plain average
+      for (const lag of candidateLags) {
+        const score = autocorrelation(values, lag)
+        if (score > bestScore) {
+          bestScore = score
+          bestLag = lag
+        }
+      }
+
+      if (bestLag > 0) {
+        // Index of the future point within the full series (source + forecast horizon)
+        const targetIndex = n - 1 + stepsAhead
+        // Walk back by the cycle length until we land on an observed value
+        let refIndex = targetIndex
+        while (refIndex >= n) refIndex -= bestLag
+        if (refIndex >= 0 && refIndex < n) {
+          // Blend the cyclical reference value with a light recency average,
+          // so a single old spike doesn't get repeated forever unmoderated.
+          return values[refIndex] * 0.7 + weightedAvg(values) * 0.3
+        }
+      }
+      return weightedAvg(values)
+    }
+
+    const incomeVals = source.map(r => r.income)
+    const expenseVals = source.map(r => r.expenses)
+    const incomeTaxVals = source.map(r => r.income_tax)
+    const socialSecurityVals = source.map(r => r.social_security)
+    const vatVals = source.map(r => r.vat)
+
+    // Salary is a step function (percentage-of-profit policy, or a fixed figure) —
+    // carry forward the most recent actual value rather than averaging/trending it.
+    const lastSalary = source[source.length - 1]?.salary ?? 0
+
+    // Seasonal anchors: same calendar month one year back, if it exists in balanceRows
+    // (not just the trimmed `source` window) — look it up by month key directly.
+    function seasonalLookup(fn: (r: MonthRow) => number, targetMonth: string): number | null {
+      const [yr, mo] = targetMonth.split('-').map(Number)
+      const lastYearKey = `${yr - 1}-${String(mo).padStart(2, '0')}`
+      const match = balanceRows.find(r => r.month === lastYearKey)
+      return match ? fn(match) : null
+    }
+
+    const lastMonth = balanceRows[balanceRows.length - 1]?.month ?? currentMonth
+    let opening = balanceRows[balanceRows.length - 1]?.closing ?? 0
+
+    return Array.from({ length: 3 }, (_, i) => {
+      const stepsAhead = i + 1
+      const [yr, mo] = lastMonth.split('-').map(Number)
+      const d = new Date(yr, mo - 1 + stepsAhead)
+      const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+
+      const incomeSeasonal = seasonalLookup(r => r.income, month)
+      const expensesSeasonal = seasonalLookup(r => r.expenses, month)
+
+      const income = Math.max(0, forecastSmooth(incomeVals, stepsAhead, incomeSeasonal))
+      const expenses = Math.max(0, forecastSmooth(expenseVals, stepsAhead, expensesSeasonal))
+      const incomeTax = Math.max(0, forecastCyclical(incomeTaxVals, stepsAhead))
+      const socialSecurity = Math.max(0, forecastCyclical(socialSecurityVals, stepsAhead))
+      const vat = Math.max(0, forecastCyclical(vatVals, stepsAhead))
+      const authority = incomeTax + socialSecurity + vat
+
+      const grossP = income - expenses
+      const salary = lastSalary
+      const closing = opening + grossP - salary - authority
+
+      const row: MonthRow = {
+        month, label: month, opening,
+        income, expenses,
+        authority, income_tax: incomeTax, social_security: socialSecurity, vat,
+        salary, closing, isLive: false, isApproved: false,
+      }
+      opening = closing
+      return row
+    })
+  }, [balanceRows, forecastSourceCount, currentMonth])
+
+  const forecastColumns: DataTableColumn<MonthRow>[] = [
+    {
+      key: 'month',
+      header: 'חודש',
+      cell: row => (
+        <span className="flex items-center gap-1">
+          {monthLabel(row.month)}
+          <span className="text-xs text-muted-foreground">(תחזית)</span>
+        </span>
+      ),
+    },
+    { key: 'opening', header: 'יתרה פתיחה', cell: row => ils(row.opening) },
+    { key: 'income', header: 'הכנסות', className: 'text-green-700', cell: row => ils(row.income) },
+    { key: 'expenses', header: 'הוצאות', className: 'text-red-600', cell: row => ils(row.expenses) },
+    { key: 'income_tax', header: 'מס הכנסה', className: 'text-orange-600', cell: row => ils(row.income_tax) },
+    { key: 'social_security', header: 'ביטוח לאומי', className: 'text-orange-600', cell: row => ils(row.social_security) },
+    { key: 'vat', header: 'מע"מ', className: 'text-orange-600', cell: row => ils(row.vat) },
+    { key: 'salary', header: 'משכורת', className: 'text-purple-600', cell: row => ils(row.salary) },
+    {
+      key: 'closing',
+      header: 'יתרה סגירה',
+      cell: row => (
+        <span className={`font-semibold ${row.closing >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+          {ils(row.closing)}
+        </span>
+      ),
+    },
+  ]
+
   const closingRow = confirmClose ? balanceRows.find(r => r.month === confirmClose.month) : null
 
   return (
@@ -348,8 +568,8 @@ export default function DashboardClient({
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
         <SummaryCard label="יתרה שוטפת" value={ils(latestClosing)} highlight={latestClosing >= 0 ? 'green' : 'red'} pinned />
         <SummaryCard label="הכנסות" month={monthLabel(selectedMonth)} value={ils(displayIncome)} />
-        <SummaryCard label="הוצאות עסקיות" month={monthLabel(selectedMonth)} value={ils(displayExpenses)} />
-        <SummaryCard label="רווח גולמי" month={monthLabel(selectedMonth)} value={ils(displayGrossProfit)} highlight={displayGrossProfit >= 0 ? 'green' : 'red'} />
+        <SummaryCard label="הוצאות" month={monthLabel(selectedMonth)} value={ils(displayExpenses)} />
+        <SummaryCard label="רווח" month={monthLabel(selectedMonth)} value={ils(displayGrossProfit)} highlight={displayGrossProfit >= 0 ? 'green' : 'red'} />
         <SummaryCard label="משכורת לעצמי" month={monthLabel(selectedMonth)} value={ils(displaySalary)} />
         <SummaryCard label="יתרה לעסק" month={monthLabel(selectedMonth)} value={ils(displayMonthlyBalance)} highlight={displayMonthlyBalance >= 0 ? 'green' : 'red'} />
       </div>
@@ -561,6 +781,32 @@ export default function DashboardClient({
           />
         </CardContent>
       </Card>
+
+      {/* 3-Month Forecast */}
+      {forecastRows.length > 0 && (
+        <Card className="border-dashed border-muted-foreground/30">
+          <CardHeader className="pb-2">
+            <div className="flex items-start justify-between flex-wrap gap-1">
+              <CardTitle className="text-base font-semibold">תחזית 3 חודשים קדימה</CardTitle>
+              <span className="text-xs text-muted-foreground">
+                מבוסס על {forecastSourceCount} חודשים אחרונים
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              הערכה בלבד — מחושבת לפי מגמה ממוצעת משוקללת של ההכנסות, ההוצאות והתשלומים לרשויות בחודשים האחרונים. ככל שיש יותר היסטוריה, הדיוק משתפר.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <DataTable
+              columns={forecastColumns}
+              data={forecastRows}
+              rowKey={row => row.month}
+              rowClassName={() => 'opacity-75 italic'}
+              emptyMessage=""
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Confirm Delete Snapshot Dialog */}
       <Dialog open={!!confirmDeleteSnapshot} onOpenChange={() => setConfirmDeleteSnapshot(null)}>
