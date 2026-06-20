@@ -14,7 +14,7 @@ export default async function PricingPage() {
   ] = await Promise.all([
     supabase
       .from('product_pricings')
-      .select('id, name, hourly_rate, time_hours, overhead_per_hour, profit_type, profit_value, suggested_price, created_at, pricing_parts(id, name, price)')
+      .select('id, name, hourly_rate, time_hours, overhead_per_hour, profit_type, profit_value, suggested_price, created_at, pricing_parts(id, name, quantity, material_id, price, materials(price, unit))')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false }),
     supabase

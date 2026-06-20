@@ -5,8 +5,10 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 
 const partSchema = z.object({
-  name: z.string().min(1),
-  price: z.coerce.number().min(0),
+  name:        z.string().min(1),
+  material_id: z.string().uuid().nullable().optional(),
+  quantity:    z.coerce.number().positive().optional(),
+  price:       z.coerce.number().min(0).optional(),
 })
 
 const savePricingSchema = z.object({
@@ -53,8 +55,54 @@ export async function savePricing(input: SavePricingInput) {
         pricing_id: pricing.id,
         user_id: user.id,
         name: p.name,
-        price: p.price,
-      }))
+        material_id: p.material_id ?? null,
+        quantity: p.quantity ?? 1,
+        price: p.material_id ? null : (p.price ?? 0),
+      })) as unknown as { pricing_id: string; user_id: string; name: string; price: number }[]
+    )
+    if (partsError) return { error: partsError.message }
+  }
+
+  revalidatePath('/pricing')
+  return { success: true }
+}
+
+export async function updatePricing(id: string, input: SavePricingInput) {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'לא מחובר' }
+
+  const parsed = savePricingSchema.safeParse(input)
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
+  const { error: pe } = await supabase
+    .from('product_pricings')
+    .update({
+      name: parsed.data.name,
+      hourly_rate: parsed.data.hourly_rate,
+      time_hours: parsed.data.time_hours,
+      overhead_per_hour: parsed.data.overhead_per_hour,
+      profit_type: parsed.data.profit_type,
+      profit_value: parsed.data.profit_value,
+      suggested_price: parsed.data.suggested_price,
+    })
+    .eq('id', id)
+    .eq('user_id', user.id)
+
+  if (pe) return { error: pe.message }
+
+  await supabase.from('pricing_parts').delete().eq('pricing_id', id).eq('user_id', user.id)
+
+  if (parsed.data.parts.length > 0) {
+    const { error: partsError } = await supabase.from('pricing_parts').insert(
+      parsed.data.parts.map(p => ({
+        pricing_id: id,
+        user_id: user.id,
+        name: p.name,
+        material_id: p.material_id ?? null,
+        quantity: p.quantity ?? 1,
+        price: p.material_id ? null : (p.price ?? 0),
+      })) as unknown as { pricing_id: string; user_id: string; name: string; price: number }[]
     )
     if (partsError) return { error: partsError.message }
   }
@@ -165,6 +213,25 @@ export async function createMaterial(input: CreateMaterialInput) {
       price:       parsed.data.price,
       category_id: parsed.data.category_id,
     })
+
+  if (error) return { error: error.message }
+  revalidatePath('/pricing')
+  return { success: true }
+}
+
+export async function updateMaterial(id: string, input: CreateMaterialInput) {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'לא מחובר' }
+
+  const parsed = materialSchema.safeParse(input)
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
+  const { error } = await supabase
+    .from('materials')
+    .update({ name: parsed.data.name, unit: parsed.data.unit, price: parsed.data.price, category_id: parsed.data.category_id })
+    .eq('id', id)
+    .eq('user_id', user.id)
 
   if (error) return { error: error.message }
   revalidatePath('/pricing')

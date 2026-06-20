@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect } from 'react'
 import {
-  createMaterial, createMaterialCategory,
+  createMaterial, updateMaterial, createMaterialCategory,
   updateMaterialCategory, deleteMaterial, deleteMaterialCategory,
   type CreateMaterialInput,
 } from '@/app/(dashboard)/pricing/actions'
@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { DataTable, type DataTableColumn, type DataTablePagination } from '@/components/ui/data-table'
-import { Plus, Trash2, Pencil, Check, X, Search, Settings2 } from 'lucide-react'
+import { Plus, Trash2, Pencil, Check, X, Search, Settings2, PencilLine } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog'
@@ -44,6 +44,7 @@ export default function MaterialsPanel({ categories, materials }: Props) {
   const [search, setSearch]                         = useState('')
   const [page, setPage]                             = useState(0)
   const [showAddMaterial, setShowAddMaterial]       = useState(false)
+  const [editingMaterial, setEditingMaterial]       = useState<Material | null>(null)
   const [showManageCategories, setShowManageCategories] = useState(false)
   const [isPending, startTransition]                = useTransition()
 
@@ -109,38 +110,58 @@ export default function MaterialsPanel({ categories, materials }: Props) {
     {
       key: 'actions',
       header: '',
-      headerClassName: 'w-10',
+      headerClassName: 'w-16',
       mobileHidden: true,
       cell: m => (
-        <Button
-          variant="ghost" size="sm"
-          onClick={() => handleDeleteMaterial(m.id)}
-          disabled={isPending}
-          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </Button>
+        <div className="flex gap-1">
+          <Button
+            variant="ghost" size="sm"
+            onClick={() => openEditMaterial(m)}
+            className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+          >
+            <PencilLine className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="ghost" size="sm"
+            onClick={() => handleDeleteMaterial(m.id)}
+            disabled={isPending}
+            className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       ),
     },
   ]
 
   function openAddMaterial() {
+    setEditingMaterial(null)
     setMatName(''); setMatUnit(''); setMatPrice('')
     setMatCatId(selectedCat ?? categories[0]?.id ?? '')
     setMatError('')
     setShowAddMaterial(true)
   }
 
-  function handleAddMaterial() {
+  function openEditMaterial(m: Material) {
+    setEditingMaterial(m)
+    setMatName(m.name); setMatUnit(m.unit); setMatPrice(String(m.price))
+    setMatCatId(m.category_id)
+    setMatError('')
+    setShowAddMaterial(true)
+  }
+
+  function handleSaveMaterial() {
     const price = parseFloat(matPrice)
     if (!matName.trim() || !matUnit.trim() || !matCatId || isNaN(price) || price <= 0) {
       setMatError('יש למלא את כל השדות'); return
     }
     const input: CreateMaterialInput = { name: matName.trim(), unit: matUnit.trim(), price, category_id: matCatId }
     startTransition(async () => {
-      const res = await createMaterial(input)
+      const res = editingMaterial
+        ? await updateMaterial(editingMaterial.id, input)
+        : await createMaterial(input)
       if (res && 'error' in res && res.error) { setMatError(res.error); toast.error(res.error) }
-      else { toast.success('חומר גלם נוסף'); setShowAddMaterial(false) }
+      else { toast.success(editingMaterial ? 'חומר גלם עודכן' : 'חומר גלם נוסף'); setShowAddMaterial(false) }
     })
   }
 
@@ -256,7 +277,7 @@ export default function MaterialsPanel({ categories, materials }: Props) {
       {/* Add Material Dialog */}
       <Dialog open={showAddMaterial} onOpenChange={setShowAddMaterial}>
         <DialogContent className="max-w-sm" dir="rtl">
-          <DialogHeader><DialogTitle>הוסף חומר גלם</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingMaterial ? 'עריכת חומר גלם' : 'הוסף חומר גלם'}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1">
               <Label>שם חומר גלם</Label>
@@ -286,7 +307,7 @@ export default function MaterialsPanel({ categories, materials }: Props) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddMaterial(false)}>ביטול</Button>
-            <Button onClick={handleAddMaterial} disabled={isPending}>שמור</Button>
+            <Button onClick={handleSaveMaterial} disabled={isPending}>{editingMaterial ? 'שמור שינויים' : 'שמור'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
