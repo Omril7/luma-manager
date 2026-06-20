@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { GeneralSettingsForm, BalanceSettingsForm, EmailSettingsForm, AccountSettingsForm, PricingSettingsForm } from './SettingsForms'
+import { SettingsCard, CalculatorsCard } from './SettingsForms'
 import type { Settings } from '@/stores/settingsStore'
 
 export default async function SettingsPage() {
@@ -14,16 +14,21 @@ export default async function SettingsPage() {
     .eq('user_id', user.id)
     .single()
 
+  const s = settings as Settings | null
+
   return (
-    <div className="w-full">
-      <h1 className="text-2xl font-bold text-foreground mb-6">הגדרות</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <GeneralSettingsForm settings={settings as Settings | null} />
-        <BalanceSettingsForm settings={settings as Settings | null} />
-        <EmailSettingsForm settings={settings as Settings | null} />
-        <PricingSettingsForm settings={settings as Settings | null} />
-        <AccountSettingsForm email={user.email ?? ''} />
-      </div>
+    <div className="w-full space-y-10">
+      <h1 className="text-2xl font-bold text-foreground">הגדרות</h1>
+
+      <section className="space-y-4">
+        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest border-b pb-2">הגדרות עסקיות</h2>
+        <SettingsCard settings={s} email={user.email ?? ''} />
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest border-b pb-2">מחשבונים</h2>
+        <CalculatorsCard settings={s} />
+      </section>
     </div>
   )
 }

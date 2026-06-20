@@ -121,6 +121,43 @@ export async function savePricingSettings(_prev: unknown, formData: FormData) {
   return { success: true }
 }
 
+const deliverySettingsSchema = z.object({
+  fuel_price_per_liter: z.coerce.number().min(0),
+  km_per_liter: z.coerce.number().min(0.1),
+  yearly_maintenance_cost: z.coerce.number().min(0),
+  yearly_insurance_cost: z.coerce.number().min(0),
+  vehicle_value: z.coerce.number().min(0),
+  depreciation_rate_percent: z.coerce.number().min(0).max(100),
+  yearly_kilometers: z.coerce.number().min(1),
+  cost_per_km: z.coerce.number().min(0),
+})
+
+export async function saveDeliverySettings(_prev: unknown, formData: FormData) {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'לא מחובר' }
+
+  const parsed = deliverySettingsSchema.safeParse({
+    fuel_price_per_liter: formData.get('fuel_price_per_liter'),
+    km_per_liter: formData.get('km_per_liter'),
+    yearly_maintenance_cost: formData.get('yearly_maintenance_cost'),
+    yearly_insurance_cost: formData.get('yearly_insurance_cost'),
+    vehicle_value: formData.get('vehicle_value'),
+    depreciation_rate_percent: formData.get('depreciation_rate_percent'),
+    yearly_kilometers: formData.get('yearly_kilometers'),
+    cost_per_km: formData.get('cost_per_km'),
+  })
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
+  const { error } = await supabase.from('settings').upsert(
+    { user_id: user.id, ...parsed.data },
+    { onConflict: 'user_id' }
+  )
+  if (error) return { error: error.message }
+  revalidatePath('/settings')
+  return { success: true }
+}
+
 export async function changePassword(_prev: unknown, formData: FormData) {
   const parsed = passwordSchema.safeParse({ password: formData.get('password') })
   if (!parsed.success) return { error: parsed.error.issues[0].message }

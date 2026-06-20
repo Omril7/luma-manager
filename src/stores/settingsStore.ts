@@ -14,6 +14,14 @@ export interface Settings {
   hours_per_day: number | null
   default_hourly_rate: number | null
   default_overhead_per_hour: number | null
+  fuel_price_per_liter: number | null
+  km_per_liter: number | null
+  yearly_maintenance_cost: number | null
+  yearly_insurance_cost: number | null
+  vehicle_value: number | null
+  depreciation_rate_percent: number | null
+  yearly_kilometers: number | null
+  cost_per_km: number | null
 }
 
 interface SettingsStore {
