@@ -72,6 +72,12 @@ export type Database = {
           opening_balance: number
           business_name: string | null
           accountant_email: string | null
+          monthly_salary_target: number | null
+          monthly_fixed_expenses: number | null
+          working_days_per_month: number | null
+          hours_per_day: number | null
+          default_hourly_rate: number | null
+          default_overhead_per_hour: number | null
           created_at: string
         }
         Insert: {
@@ -82,6 +88,12 @@ export type Database = {
           opening_balance?: number
           business_name?: string | null
           accountant_email?: string | null
+          monthly_salary_target?: number | null
+          monthly_fixed_expenses?: number | null
+          working_days_per_month?: number | null
+          hours_per_day?: number | null
+          default_hourly_rate?: number | null
+          default_overhead_per_hour?: number | null
           created_at?: string
         }
         Update: {
@@ -92,6 +104,12 @@ export type Database = {
           opening_balance?: number
           business_name?: string | null
           accountant_email?: string | null
+          monthly_salary_target?: number | null
+          monthly_fixed_expenses?: number | null
+          working_days_per_month?: number | null
+          hours_per_day?: number | null
+          default_hourly_rate?: number | null
+          default_overhead_per_hour?: number | null
           created_at?: string
         }
         Relationships: []

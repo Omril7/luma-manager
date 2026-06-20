@@ -8,10 +8,16 @@ export default async function PricingPage() {
   if (!user) redirect('/login')
 
   const [
+    { data: settings },
     { data: pricings },
     { data: materialCategories },
     { data: materials },
   ] = await Promise.all([
+    supabase
+      .from('settings')
+      .select('default_hourly_rate, default_overhead_per_hour')
+      .eq('user_id', user.id)
+      .single(),
     supabase
       .from('product_pricings')
       .select('id, name, hourly_rate, time_hours, overhead_per_hour, profit_type, profit_value, suggested_price, created_at, pricing_parts(id, name, quantity, material_id, price, materials(price, unit))')
@@ -32,7 +38,8 @@ export default async function PricingPage() {
   return (
     <PricingClient
       pricings={(pricings ?? []) as unknown as Parameters<typeof PricingClient>[0]['pricings']}
-      defaultHourlyRate={0}
+      defaultHourlyRate={settings?.default_hourly_rate ?? 0}
+      defaultOverheadPerHour={settings?.default_overhead_per_hour ?? 0}
       materialCategories={materialCategories ?? []}
       materials={(materials ?? []) as unknown as Parameters<typeof PricingClient>[0]['materials']}
     />

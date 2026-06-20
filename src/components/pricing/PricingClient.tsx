@@ -6,11 +6,12 @@ import MaterialsPanel, { type MaterialCategory, type Material } from '@/componen
 interface Props {
   pricings: PricingRow[]
   defaultHourlyRate: number
+  defaultOverheadPerHour: number
   materialCategories: MaterialCategory[]
   materials: Material[]
 }
 
-export default function PricingClient({ pricings, defaultHourlyRate, materialCategories, materials }: Props) {
+export default function PricingClient({ pricings, defaultHourlyRate, defaultOverheadPerHour, materialCategories, materials }: Props) {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-foreground">תמחור מוצרים</h1>
@@ -18,6 +19,7 @@ export default function PricingClient({ pricings, defaultHourlyRate, materialCat
         <PricingHistoryPanel
           pricings={pricings}
           defaultHourlyRate={defaultHourlyRate}
+          defaultOverheadPerHour={defaultOverheadPerHour}
           materials={materials}
         />
         <MaterialsPanel categories={materialCategories} materials={materials} />

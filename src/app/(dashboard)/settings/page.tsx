@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { GeneralSettingsForm, BalanceSettingsForm, EmailSettingsForm, AccountSettingsForm } from './SettingsForms'
+import { GeneralSettingsForm, BalanceSettingsForm, EmailSettingsForm, AccountSettingsForm, PricingSettingsForm } from './SettingsForms'
 import type { Settings } from '@/stores/settingsStore'
 
 export default async function SettingsPage() {
@@ -21,6 +21,7 @@ export default async function SettingsPage() {
         <GeneralSettingsForm settings={settings as Settings | null} />
         <BalanceSettingsForm settings={settings as Settings | null} />
         <EmailSettingsForm settings={settings as Settings | null} />
+        <PricingSettingsForm settings={settings as Settings | null} />
         <AccountSettingsForm email={user.email ?? ''} />
       </div>
     </div>

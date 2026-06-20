@@ -87,6 +87,40 @@ export async function saveEmailSettings(_prev: unknown, formData: FormData) {
   return { success: true }
 }
 
+const pricingSettingsSchema = z.object({
+  monthly_salary_target: z.coerce.number().min(0),
+  monthly_fixed_expenses: z.coerce.number().min(0),
+  working_days_per_month: z.coerce.number().min(1).max(31),
+  hours_per_day: z.coerce.number().min(1).max(24),
+  default_hourly_rate: z.coerce.number().min(0),
+  default_overhead_per_hour: z.coerce.number().min(0),
+})
+
+export async function savePricingSettings(_prev: unknown, formData: FormData) {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'לא מחובר' }
+
+  const parsed = pricingSettingsSchema.safeParse({
+    monthly_salary_target: formData.get('monthly_salary_target'),
+    monthly_fixed_expenses: formData.get('monthly_fixed_expenses'),
+    working_days_per_month: formData.get('working_days_per_month'),
+    hours_per_day: formData.get('hours_per_day'),
+    default_hourly_rate: formData.get('default_hourly_rate'),
+    default_overhead_per_hour: formData.get('default_overhead_per_hour'),
+  })
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
+  const { error } = await supabase.from('settings').upsert(
+    { user_id: user.id, ...parsed.data },
+    { onConflict: 'user_id' }
+  )
+  if (error) return { error: error.message }
+  revalidatePath('/settings')
+  revalidatePath('/pricing')
+  return { success: true }
+}
+
 export async function changePassword(_prev: unknown, formData: FormData) {
   const parsed = passwordSchema.safeParse({ password: formData.get('password') })
   if (!parsed.success) return { error: parsed.error.issues[0].message }

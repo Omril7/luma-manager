@@ -43,6 +43,7 @@ function partTotal(pp: PricingPart): number {
 interface Props {
   pricings: PricingRow[]
   defaultHourlyRate: number
+  defaultOverheadPerHour: number
   materials: Material[]
 }
 
@@ -67,7 +68,7 @@ function formatDate(iso: string) {
 
 const EMPTY_PART: Part = { materialId: null, name: '', unit: '', unitPrice: 0, quantity: 1 }
 
-export default function PricingHistoryPanel({ pricings, defaultHourlyRate, materials }: Props) {
+export default function PricingHistoryPanel({ pricings, defaultHourlyRate, defaultOverheadPerHour, materials }: Props) {
   // list state
   const [detailId, setDetailId]      = useState<string | null>(null)
   const [search, setSearch]          = useState('')
@@ -83,7 +84,7 @@ export default function PricingHistoryPanel({ pricings, defaultHourlyRate, mater
   const [parts, setParts]                 = useState<Part[]>([EMPTY_PART])
   const [hourlyRate, setHourlyRate]       = useState(defaultHourlyRate)
   const [timeHours, setTimeHours]         = useState(0)
-  const [overheadPerHour, setOverheadPerHour] = useState(0)
+  const [overheadPerHour, setOverheadPerHour] = useState(defaultOverheadPerHour)
   const [profitType, setProfitType]       = useState<'percent' | 'fixed'>('percent')
   const [profitValue, setProfitValue]     = useState(0)
 
@@ -111,7 +112,7 @@ export default function PricingHistoryPanel({ pricings, defaultHourlyRate, mater
   function resetWizard() {
     setStep(0); setEditingId(null); setWizardName(''); setWizardError('')
     setParts([EMPTY_PART]); setHourlyRate(defaultHourlyRate)
-    setTimeHours(0); setOverheadPerHour(0); setProfitType('percent'); setProfitValue(0)
+    setTimeHours(0); setOverheadPerHour(defaultOverheadPerHour); setProfitType('percent'); setProfitValue(0)
   }
 
   function openNew() { resetWizard(); setShowWizard(true) }

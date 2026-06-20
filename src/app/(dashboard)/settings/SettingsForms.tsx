@@ -5,11 +5,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { saveGeneralSettings, saveBalanceSettings, saveEmailSettings, changePassword } from './actions'
+import { saveGeneralSettings, saveBalanceSettings, saveEmailSettings, changePassword, savePricingSettings } from './actions'
 import type { Settings } from '@/stores/settingsStore'
 import { toast } from 'sonner'
-import { useEffect } from 'react'
-import { Settings2, Wallet, Mail, User } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Settings2, Wallet, Mail, User, Calculator } from 'lucide-react'
 import { PasswordInput } from '@/components/ui/password-input'
 
 interface ActionState {
@@ -164,6 +164,122 @@ export function EmailSettingsForm({ settings }: { settings: Settings | null }) {
               אל כתובת זו יישלח הסיכום החודשי
             </p>
           </div>
+          <SubmitButton label="שמור" pendingLabel="שומר..." />
+        </form>
+      </CardContent>
+    </Card>
+  )
+}
+
+export function PricingSettingsForm({ settings }: { settings: Settings | null }) {
+  const [state, action] = useFormState<ActionState | null, FormData>(savePricingSettings, null)
+  useToastOnResult(state)
+
+  const [salary, setSalary]       = useState(settings?.monthly_salary_target ?? 0)
+  const [expenses, setExpenses]   = useState(settings?.monthly_fixed_expenses ?? 0)
+  const [days, setDays]           = useState(settings?.working_days_per_month ?? 22)
+  const [hours, setHours]         = useState(settings?.hours_per_day ?? 8)
+
+  const hoursPerMonth   = days * hours
+  const derivedHourly   = hoursPerMonth > 0 ? salary / hoursPerMonth : 0
+  const derivedOverhead = hoursPerMonth > 0 ? expenses / hoursPerMonth : 0
+
+  function ils(n: number) {
+    return n.toLocaleString('he-IL', { style: 'currency', currency: 'ILS', maximumFractionDigits: 2 })
+  }
+
+  return (
+    <Card className="h-full">
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Calculator className="h-5 w-5 text-muted-foreground" />
+          תמחור — ערכי ברירת מחדל
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form action={action} className="space-y-6">
+          <input type="hidden" name="default_hourly_rate"       value={derivedHourly.toFixed(2)} />
+          <input type="hidden" name="default_overhead_per_hour" value={derivedOverhead.toFixed(2)} />
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="space-y-1">
+              <Label htmlFor="monthly_salary_target">יעד שכר חודשי</Label>
+              <div className="relative">
+                <Input
+                  id="monthly_salary_target"
+                  name="monthly_salary_target"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={salary}
+                  onChange={e => setSalary(Number(e.target.value))}
+                  className="pl-8"
+                />
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">₪</span>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="monthly_fixed_expenses">הוצאות קבועות חודשיות</Label>
+              <div className="relative">
+                <Input
+                  id="monthly_fixed_expenses"
+                  name="monthly_fixed_expenses"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={expenses}
+                  onChange={e => setExpenses(Number(e.target.value))}
+                  className="pl-8"
+                />
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">₪</span>
+              </div>
+              <p className="text-xs text-muted-foreground">שכ&quot;ד, ציוד, מנויים...</p>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="working_days_per_month">ימי עבודה בחודש</Label>
+              <Input
+                id="working_days_per_month"
+                name="working_days_per_month"
+                type="number"
+                min="1"
+                max="31"
+                step="1"
+                value={days}
+                onChange={e => setDays(Number(e.target.value))}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="hours_per_day">שעות עבודה ביום</Label>
+              <Input
+                id="hours_per_day"
+                name="hours_per_day"
+                type="number"
+                min="1"
+                max="24"
+                step="0.5"
+                value={hours}
+                onChange={e => setHours(Number(e.target.value))}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 rounded-lg border bg-muted/40 p-4">
+            <div className="space-y-0.5">
+              <p className="text-xs text-muted-foreground">ערך שעה מחושב</p>
+              <p className="text-xl font-semibold tabular-nums">{ils(derivedHourly)}</p>
+              <p className="text-xs text-muted-foreground">
+                {ils(salary)} ÷ {hoursPerMonth} שעות
+              </p>
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-xs text-muted-foreground">הוצאות נלוות לשעה</p>
+              <p className="text-xl font-semibold tabular-nums">{ils(derivedOverhead)}</p>
+              <p className="text-xs text-muted-foreground">
+                {ils(expenses)} ÷ {hoursPerMonth} שעות
+              </p>
+            </div>
+          </div>
+
           <SubmitButton label="שמור" pendingLabel="שומר..." />
         </form>
       </CardContent>
