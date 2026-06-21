@@ -5,12 +5,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
-import { saveGeneralSettings, saveBalanceSettings, saveEmailSettings, changePassword, savePricingSettings, saveDeliverySettings } from './actions'
+import { saveGeneralSettings, saveBalanceSettings, saveEmailSettings, changePassword, savePricingWithItems, saveDeliverySettings } from './actions'
 import { formatILS } from '@/lib/utils'
 import type { Settings } from '@/stores/settingsStore'
 import { toast } from 'sonner'
 import { useEffect, useState } from 'react'
-import { Settings2, Calculator, Car } from 'lucide-react'
+import { Settings2, Calculator, Car, Plus, X } from 'lucide-react'
 import { PasswordInput } from '@/components/ui/password-input'
 
 interface ActionState {
@@ -35,9 +35,8 @@ function SubmitButton({ label, pendingLabel }: { label: string; pendingLabel: st
   )
 }
 
-
 function ILSInput({ id, name, value, onChange, step = '1', min = '0', className }: {
-  id: string; name: string; value: number; onChange: (v: number) => void
+  id: string; name?: string; value: number; onChange: (v: number) => void
   step?: string; min?: string; className?: string
 }) {
   return (
@@ -64,6 +63,9 @@ function ResultRow({ label, value }: { label: string; value: string }) {
 function GeneralSection({ settings }: { settings: Settings | null }) {
   const [state, action] = useFormState<ActionState | null, FormData>(saveGeneralSettings, null)
   useToastOnResult(state)
+  const [vatFreq, setVatFreq] = useState<'monthly' | 'bimonthly'>(
+    (settings?.vat_report_frequency as 'monthly' | 'bimonthly' | null) ?? 'bimonthly'
+  )
   return (
     <form action={action} className="flex flex-col h-full gap-4">
       <div className="space-y-1.5">
@@ -87,6 +89,26 @@ function GeneralSection({ settings }: { settings: Settings | null }) {
               defaultValue={settings?.paycheck_percent ?? 30} className="pl-8" />
             <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">%</span>
           </div>
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <Label>תדירות דיווח מע&quot;מ</Label>
+        <input type="hidden" name="vat_report_frequency" value={vatFreq} />
+        <div className="flex rounded-lg border overflow-hidden text-sm">
+          <button
+            type="button"
+            onClick={() => setVatFreq('monthly')}
+            className={`flex-1 py-1.5 transition-colors ${vatFreq === 'monthly' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-muted-foreground'}`}
+          >
+            חודשי
+          </button>
+          <button
+            type="button"
+            onClick={() => setVatFreq('bimonthly')}
+            className={`flex-1 py-1.5 border-r transition-colors ${vatFreq === 'bimonthly' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-muted-foreground'}`}
+          >
+            דו-חודשי
+          </button>
         </div>
       </div>
       <div className="mt-auto pt-2">
@@ -175,34 +197,57 @@ export function SettingsCard({ settings, email }: { settings: Settings | null; e
 
 // ─── Calculator cards ─────────────────────────────────────────────────────────
 
-function PricingSection({ settings }: { settings: Settings | null }) {
-  const [state, action] = useFormState<ActionState | null, FormData>(savePricingSettings, null)
+type OverheadItem = { _key: string; name: string; price: number; note: string }
+
+type DbOverheadItem = { id: string; name: string; price: number; note: string | null }
+
+function PricingSection({
+  settings,
+  overheadItems,
+}: {
+  settings: Settings | null
+  overheadItems: DbOverheadItem[]
+}) {
+  const [state, action] = useFormState<ActionState | null, FormData>(savePricingWithItems, null)
   useToastOnResult(state)
 
-  const [salary, setSalary]     = useState(settings?.monthly_salary_target ?? 0)
-  const [expenses, setExpenses] = useState(settings?.monthly_fixed_expenses ?? 0)
-  const [days, setDays]         = useState(settings?.working_days_per_month ?? 22)
-  const [hours, setHours]       = useState(settings?.hours_per_day ?? 8)
+  const [salary, setSalary] = useState(settings?.monthly_salary_target ?? 0)
+  const [days, setDays]     = useState(settings?.working_days_per_month ?? 22)
+  const [hours, setHours]   = useState(settings?.hours_per_day ?? 8)
+  const [items, setItems]   = useState<OverheadItem[]>(() =>
+    overheadItems.map(i => ({ _key: i.id, name: i.name, price: i.price, note: i.note ?? '' }))
+  )
 
   const hoursPerMonth   = days * hours
+  const totalExpenses   = items.reduce((s, i) => s + i.price, 0)
   const derivedHourly   = hoursPerMonth > 0 ? salary / hoursPerMonth : 0
-  const derivedOverhead = hoursPerMonth > 0 ? expenses / hoursPerMonth : 0
+  const derivedOverhead = hoursPerMonth > 0 ? totalExpenses / hoursPerMonth : 0
+
+  function addItem() {
+    setItems(prev => [...prev, { _key: crypto.randomUUID(), name: '', price: 0, note: '' }])
+  }
+
+  function removeItem(idx: number) {
+    setItems(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  function updateItem(idx: number, field: keyof Omit<OverheadItem, '_key'>, value: string | number) {
+    setItems(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item))
+  }
 
   return (
     <form action={action} className="flex flex-col h-full">
       <input type="hidden" name="default_hourly_rate"       value={derivedHourly.toFixed(2)} />
       <input type="hidden" name="default_overhead_per_hour" value={derivedOverhead.toFixed(2)} />
+      <input type="hidden" name="overhead_items_json"
+        value={JSON.stringify(items.map(({ name, price, note }) => ({ name, price, note: note || null })))} />
+
       <div className="flex flex-col lg:flex-row gap-6 flex-1">
         <div className="flex-1 flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="monthly_salary_target">יעד שכר חודשי</Label>
+              <Label htmlFor="monthly_salary_target">יעד שכר חודשי ברוטו</Label>
               <ILSInput id="monthly_salary_target" name="monthly_salary_target" value={salary} onChange={setSalary} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="monthly_fixed_expenses">הוצאות קבועות חודשיות</Label>
-              <ILSInput id="monthly_fixed_expenses" name="monthly_fixed_expenses" value={expenses} onChange={setExpenses} />
-              <p className="text-xs text-muted-foreground">שכ&quot;ד, ציוד, מנויים...</p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="working_days_per_month">ימי עבודה בחודש</Label>
@@ -217,10 +262,101 @@ function PricingSection({ settings }: { settings: Settings | null }) {
                 value={hours} onChange={e => setHours(Number(e.target.value))} />
             </div>
           </div>
+
+          {/* Overhead items table */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <Label>הוצאות קבועות חודשיות</Label>
+              <button
+                type="button"
+                onClick={addItem}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                הוסף שורה
+              </button>
+            </div>
+            <div className="rounded-lg border overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/40">
+                  <tr>
+                    <th className="text-right px-3 py-2 text-xs font-medium text-muted-foreground">שם</th>
+                    <th className="text-right px-3 py-2 text-xs font-medium text-muted-foreground w-28">מחיר</th>
+                    <th className="text-right px-3 py-2 text-xs font-medium text-muted-foreground">הערה</th>
+                    <th className="w-8" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item, idx) => (
+                    <tr key={item._key} className="border-t">
+                      <td className="px-2 py-1.5">
+                        <Input
+                          value={item.name}
+                          onChange={e => updateItem(idx, 'name', e.target.value)}
+                          placeholder="שם"
+                          className="h-7 text-sm"
+                        />
+                      </td>
+                      <td className="px-2 py-1.5 w-28">
+                        <div className="relative">
+                          <Input
+                            type="number" min="0" step="0.01"
+                            value={item.price}
+                            onChange={e => updateItem(idx, 'price', Number(e.target.value))}
+                            className="pl-8 h-7 text-sm"
+                          />
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">₪</span>
+                        </div>
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <Input
+                          value={item.note}
+                          onChange={e => updateItem(idx, 'note', e.target.value)}
+                          placeholder="הערה"
+                          className="h-7 text-sm"
+                        />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <button
+                          type="button"
+                          onClick={() => removeItem(idx)}
+                          className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {items.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="px-3 py-3 text-center text-xs text-muted-foreground">
+                        אין פריטים — לחץ &quot;הוסף שורה&quot;
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+                {items.length > 0 && (
+                  <tfoot className="bg-muted/20 border-t">
+                    <tr>
+                      <td className="px-3 py-2 text-xs font-semibold text-muted-foreground" colSpan={2}>
+                        סה&quot;כ חודשי
+                      </td>
+                      <td className="px-3 py-2 text-sm font-semibold" colSpan={2}>
+                        {formatILS(totalExpenses)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            </div>
+            <p className="text-xs text-muted-foreground">שכ&quot;ד, ציוד, מנויים וכד&apos;</p>
+          </div>
+
           <div className="mt-auto pt-2">
             <SubmitButton label="שמור" pendingLabel="שומר..." />
           </div>
         </div>
+
         <div className="lg:w-52 rounded-lg border bg-muted/40 p-4 flex flex-col">
           <p className="text-xs font-semibold text-muted-foreground mb-3">{hoursPerMonth} שעות / חודש</p>
           <ResultRow label="ערך שעה" value={formatILS(derivedHourly)} />
@@ -318,7 +454,13 @@ function DeliverySection({ settings }: { settings: Settings | null }) {
   )
 }
 
-export function CalculatorsCard({ settings }: { settings: Settings | null }) {
+export function CalculatorsCard({
+  settings,
+  overheadItems,
+}: {
+  settings: Settings | null
+  overheadItems: DbOverheadItem[]
+}) {
   return (
     <Card className="overflow-hidden">
       <CardHeader className="pb-3">
@@ -334,7 +476,7 @@ export function CalculatorsCard({ settings }: { settings: Settings | null }) {
             <span className="text-xs font-semibold text-muted-foreground">תמחור — ערכי ברירת מחדל</span>
           </div>
           <div className="p-5 flex-1">
-            <PricingSection settings={settings} />
+            <PricingSection settings={settings} overheadItems={overheadItems} />
           </div>
         </div>
         <div className="bg-card flex flex-col">

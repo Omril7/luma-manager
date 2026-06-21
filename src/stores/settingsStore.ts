@@ -22,6 +22,7 @@ export interface Settings {
   depreciation_rate_percent: number | null
   yearly_kilometers: number | null
   cost_per_km: number | null
+  vat_report_frequency: string | null
 }
 
 interface SettingsStore {

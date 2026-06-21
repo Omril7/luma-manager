@@ -33,12 +33,13 @@ export type VatPaymentRow = {
 
 interface Props {
   vatRate: number
+  vatReportFrequency: 'monthly' | 'bimonthly'
   incomeRows: IncomeRow[]
   installments: InstallmentRow[]
   vatPayments: VatPaymentRow[]
 }
 
-const PERIOD_LABELS = [
+const BIMONTHLY_LABELS = [
   'ינואר - פברואר',
   'מרץ - אפריל',
   'מאי - יוני',
@@ -56,19 +57,27 @@ function ils(n: number) {
   return n.toLocaleString('he-IL', { style: 'currency', currency: 'ILS', maximumFractionDigits: 2 })
 }
 
-export default function VatReportClient({ vatRate, incomeRows, installments, vatPayments }: Props) {
+export default function VatReportClient({ vatRate, vatReportFrequency, incomeRows, installments, vatPayments }: Props) {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
-  const [periodIdx, setPeriodIdx] = useState(() => Math.floor(now.getMonth() / 2))
+  const [periodIdx, setPeriodIdx] = useState(() =>
+    vatReportFrequency === 'monthly' ? now.getMonth() : Math.floor(now.getMonth() / 2)
+  )
 
-  const startMonth = periodIdx * 2 + 1
-  const endMonth = startMonth + 1
+  const periodLabels = vatReportFrequency === 'monthly' ? MONTH_LABELS : BIMONTHLY_LABELS
+  const numPeriods   = vatReportFrequency === 'monthly' ? 12 : 6
 
   function monthInPeriod(dateStr: string) {
-    const ym = dateStr.slice(0, 7)
-    const [y, m] = ym.split('-').map(Number)
-    return y === year && m >= startMonth && m <= endMonth
+    const [y, m] = dateStr.slice(0, 7).split('-').map(Number)
+    if (y !== year) return false
+    if (vatReportFrequency === 'monthly') {
+      return m === periodIdx + 1
+    }
+    const startMonth = periodIdx * 2 + 1
+    return m >= startMonth && m <= startMonth + 1
   }
+
+  const currentPeriodLabel = periodLabels[periodIdx]
 
   const periodIncome = incomeRows.filter(r => monthInPeriod(r.income_date))
   const periodInstallments = installments.filter(
@@ -192,9 +201,9 @@ export default function VatReportClient({ vatRate, incomeRows, installments, vat
             </button>
           </div>
 
-          {/* Bi-monthly period selector */}
-          <div className="flex flex-wrap gap-1.5 justify-end">
-            {PERIOD_LABELS.map((label, idx) => (
+          {/* Period selector (monthly = 12 pills / bimonthly = 6 pills) */}
+          <div className={`flex flex-wrap gap-1.5 justify-end ${vatReportFrequency === 'monthly' ? 'max-w-xs' : ''}`}>
+            {Array.from({ length: numPeriods }, (_, idx) => (
               <button
                 key={idx}
                 onClick={() => setPeriodIdx(idx)}
@@ -204,7 +213,7 @@ export default function VatReportClient({ vatRate, incomeRows, installments, vat
                     : 'bg-muted text-muted-foreground hover:bg-muted/70 hover:text-foreground'
                 }`}
               >
-                {label}
+                {periodLabels[idx]}
               </button>
             ))}
           </div>
@@ -251,7 +260,7 @@ export default function VatReportClient({ vatRate, incomeRows, installments, vat
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-semibold">
-            הכנסות — {PERIOD_LABELS[periodIdx]} {year}
+            הכנסות — {currentPeriodLabel} {year}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -269,7 +278,7 @@ export default function VatReportClient({ vatRate, incomeRows, installments, vat
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-semibold">
-            הוצאות מוכרות מע&quot;מ — {PERIOD_LABELS[periodIdx]} {year}
+            הוצאות מוכרות מע&quot;מ — {currentPeriodLabel} {year}
           </CardTitle>
         </CardHeader>
         <CardContent>

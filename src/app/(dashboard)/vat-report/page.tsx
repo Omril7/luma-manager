@@ -15,7 +15,7 @@ export default async function VatReportPage() {
   ] = await Promise.all([
     supabase
       .from('settings')
-      .select('vat_rate')
+      .select('vat_rate, vat_report_frequency')
       .eq('user_id', user.id)
       .single(),
     supabase
@@ -39,9 +39,13 @@ export default async function VatReportPage() {
       .eq('type', 'vat'),
   ])
 
+  const vatReportFrequency =
+    settings?.vat_report_frequency === 'monthly' ? 'monthly' : 'bimonthly'
+
   return (
     <VatReportClient
       vatRate={settings?.vat_rate ?? 18}
+      vatReportFrequency={vatReportFrequency}
       incomeRows={(incomeRows ?? []) as IncomeRow[]}
       installments={(installments ?? []) as unknown as InstallmentRow[]}
       vatPayments={(vatPayments ?? []) as VatPaymentRow[]}

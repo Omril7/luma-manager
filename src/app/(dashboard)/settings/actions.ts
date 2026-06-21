@@ -8,6 +8,7 @@ const generalSchema = z.object({
   business_name: z.string().optional(),
   vat_rate: z.coerce.number().min(0).max(100),
   paycheck_percent: z.coerce.number().min(0).max(100),
+  vat_report_frequency: z.enum(['monthly', 'bimonthly']).default('bimonthly'),
 })
 
 const balanceSchema = z.object({
@@ -31,6 +32,7 @@ export async function saveGeneralSettings(_prev: unknown, formData: FormData) {
     business_name: formData.get('business_name'),
     vat_rate: formData.get('vat_rate'),
     paycheck_percent: formData.get('paycheck_percent'),
+    vat_report_frequency: formData.get('vat_report_frequency'),
   })
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
@@ -40,6 +42,7 @@ export async function saveGeneralSettings(_prev: unknown, formData: FormData) {
       business_name: parsed.data.business_name ?? null,
       vat_rate: parsed.data.vat_rate,
       paycheck_percent: parsed.data.paycheck_percent,
+      vat_report_frequency: parsed.data.vat_report_frequency,
     },
     { onConflict: 'user_id' }
   )
@@ -155,6 +158,83 @@ export async function saveDeliverySettings(_prev: unknown, formData: FormData) {
   )
   if (error) return { error: error.message }
   revalidatePath('/settings')
+  return { success: true }
+}
+
+const overheadItemSchema = z.object({
+  name: z.string(),
+  price: z.coerce.number().min(0),
+  note: z.string().nullable().optional(),
+})
+
+const pricingWithItemsSchema = z.object({
+  monthly_salary_target: z.coerce.number().min(0),
+  working_days_per_month: z.coerce.number().min(1).max(31),
+  hours_per_day: z.coerce.number().min(1).max(24),
+  default_hourly_rate: z.coerce.number().min(0),
+  default_overhead_per_hour: z.coerce.number().min(0),
+  overhead_items_json: z.string(),
+})
+
+export async function savePricingWithItems(_prev: unknown, formData: FormData) {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'לא מחובר' }
+
+  const parsed = pricingWithItemsSchema.safeParse({
+    monthly_salary_target: formData.get('monthly_salary_target'),
+    working_days_per_month: formData.get('working_days_per_month'),
+    hours_per_day: formData.get('hours_per_day'),
+    default_hourly_rate: formData.get('default_hourly_rate'),
+    default_overhead_per_hour: formData.get('default_overhead_per_hour'),
+    overhead_items_json: formData.get('overhead_items_json'),
+  })
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
+  let items: { name: string; price: number; note?: string | null }[]
+  try {
+    const raw: unknown = JSON.parse(parsed.data.overhead_items_json)
+    const itemsParsed = z.array(overheadItemSchema).safeParse(raw)
+    if (!itemsParsed.success) return { error: 'שגיאה בנתוני פריטי עלויות' }
+    items = itemsParsed.data
+  } catch {
+    return { error: 'שגיאה בנתוני פריטי עלויות' }
+  }
+
+  const { error: settingsError } = await supabase.from('settings').upsert(
+    {
+      user_id: user.id,
+      monthly_salary_target: parsed.data.monthly_salary_target,
+      working_days_per_month: parsed.data.working_days_per_month,
+      hours_per_day: parsed.data.hours_per_day,
+      default_hourly_rate: parsed.data.default_hourly_rate,
+      default_overhead_per_hour: parsed.data.default_overhead_per_hour,
+    },
+    { onConflict: 'user_id' }
+  )
+  if (settingsError) return { error: settingsError.message }
+
+  const { error: deleteError } = await supabase
+    .from('pricing_overhead_items')
+    .delete()
+    .eq('user_id', user.id)
+  if (deleteError) return { error: deleteError.message }
+
+  if (items.length > 0) {
+    const { error: insertError } = await supabase
+      .from('pricing_overhead_items')
+      .insert(items.map((item, i) => ({
+        user_id: user.id,
+        name: item.name,
+        price: item.price,
+        note: item.note ?? null,
+        sort_order: i,
+      })))
+    if (insertError) return { error: insertError.message }
+  }
+
+  revalidatePath('/settings')
+  revalidatePath('/pricing')
   return { success: true }
 }
 

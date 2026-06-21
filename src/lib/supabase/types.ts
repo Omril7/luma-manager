@@ -86,6 +86,7 @@ export type Database = {
           depreciation_rate_percent: number | null
           yearly_kilometers: number | null
           cost_per_km: number | null
+          vat_report_frequency: string | null
           created_at: string
         }
         Insert: {
@@ -110,6 +111,7 @@ export type Database = {
           depreciation_rate_percent?: number | null
           yearly_kilometers?: number | null
           cost_per_km?: number | null
+          vat_report_frequency?: string | null
           created_at?: string
         }
         Update: {
@@ -134,6 +136,7 @@ export type Database = {
           depreciation_rate_percent?: number | null
           yearly_kilometers?: number | null
           cost_per_km?: number | null
+          vat_report_frequency?: string | null
           created_at?: string
         }
         Relationships: []
@@ -470,6 +473,36 @@ export type Database = {
           amount?: number
           payment_month?: string
           notes?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      pricing_overhead_items: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          price: number
+          note: string | null
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name?: string
+          price?: number
+          note?: string | null
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          price?: number
+          note?: string | null
+          sort_order?: number
           created_at?: string
         }
         Relationships: []
