@@ -83,12 +83,13 @@ function GeneralSection({ settings }: { settings: Settings | null }) {
           </div>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="paycheck_percent">משכורת מרווח</Label>
+          <Label htmlFor="authorities_pct">% ניכוי לרשויות</Label>
           <div className="relative">
-            <Input id="paycheck_percent" name="paycheck_percent" type="number" step="0.01" min="0" max="100"
-              defaultValue={settings?.paycheck_percent ?? 30} className="pl-8" />
+            <Input id="authorities_pct" name="authorities_pct" type="number" step="0.01" min="0" max="100"
+              defaultValue={settings?.authorities_pct ?? 47} className="pl-8" />
             <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">%</span>
           </div>
+          <p className="text-xs text-muted-foreground">מס + ביטוח לאומי על השכר</p>
         </div>
       </div>
       <div className="space-y-1.5">

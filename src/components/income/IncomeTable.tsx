@@ -16,6 +16,7 @@ type IncomeRow = {
   discount_amount: number
   final_price: number
   delivery_amount: number
+  work_hours: number
   income_date: string
   notes: string | null
   source: string
@@ -78,6 +79,14 @@ export default function IncomeTable({ rows, filterMonth, isMonthClosed, onEdit }
       header: 'מחיר סופי',
       sortValue: r => r.final_price,
       cell: r => <span className="font-medium text-green-700">{formatILS(r.final_price, 2)}</span>,
+    },
+    {
+      key: 'work_hours',
+      header: 'שעות עבודה',
+      sortValue: r => r.work_hours,
+      cell: r => r.work_hours > 0
+        ? <span className="tabular-nums">{r.work_hours}ש׳</span>
+        : <span className="text-muted-foreground/50">—</span>,
     },
     {
       key: 'delivery_amount',

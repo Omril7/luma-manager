@@ -87,6 +87,7 @@ export type Database = {
           yearly_kilometers: number | null
           cost_per_km: number | null
           vat_report_frequency: string | null
+          authorities_pct: number | null
           created_at: string
         }
         Insert: {
@@ -94,6 +95,7 @@ export type Database = {
           user_id: string
           vat_rate?: number
           paycheck_percent?: number
+          authorities_pct?: number | null
           opening_balance?: number
           business_name?: string | null
           accountant_email?: string | null
@@ -137,6 +139,7 @@ export type Database = {
           yearly_kilometers?: number | null
           cost_per_km?: number | null
           vat_report_frequency?: string | null
+          authorities_pct?: number | null
           created_at?: string
         }
         Relationships: []
@@ -285,6 +288,7 @@ export type Database = {
           discount_amount: number
           final_price: number
           delivery_amount: number
+          work_hours: number
           income_date: string
           notes: string | null
           created_at: string
@@ -300,6 +304,7 @@ export type Database = {
           discount_amount?: number
           final_price: number
           delivery_amount?: number
+          work_hours?: number
           income_date: string
           notes?: string | null
           created_at?: string
@@ -315,6 +320,7 @@ export type Database = {
           discount_amount?: number
           final_price?: number
           delivery_amount?: number
+          work_hours?: number
           income_date?: string
           notes?: string | null
           created_at?: string
@@ -328,6 +334,7 @@ export type Database = {
           external_id: string | null
           name: string
           description: string | null
+          default_work_hours: number
           created_at: string
         }
         Insert: {
@@ -336,6 +343,7 @@ export type Database = {
           external_id?: string | null
           name: string
           description?: string | null
+          default_work_hours?: number
           created_at?: string
         }
         Update: {
@@ -344,6 +352,7 @@ export type Database = {
           external_id?: string | null
           name?: string
           description?: string | null
+          default_work_hours?: number
           created_at?: string
         }
         Relationships: []

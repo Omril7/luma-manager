@@ -7,7 +7,7 @@ import { revalidatePath } from 'next/cache'
 const generalSchema = z.object({
   business_name: z.string().optional(),
   vat_rate: z.coerce.number().min(0).max(100),
-  paycheck_percent: z.coerce.number().min(0).max(100),
+  authorities_pct: z.coerce.number().min(0).max(100),
   vat_report_frequency: z.enum(['monthly', 'bimonthly']).default('bimonthly'),
 })
 
@@ -31,7 +31,7 @@ export async function saveGeneralSettings(_prev: unknown, formData: FormData) {
   const parsed = generalSchema.safeParse({
     business_name: formData.get('business_name'),
     vat_rate: formData.get('vat_rate'),
-    paycheck_percent: formData.get('paycheck_percent'),
+    authorities_pct: formData.get('authorities_pct'),
     vat_report_frequency: formData.get('vat_report_frequency'),
   })
   if (!parsed.success) return { error: parsed.error.issues[0].message }
@@ -41,7 +41,7 @@ export async function saveGeneralSettings(_prev: unknown, formData: FormData) {
       user_id: user.id,
       business_name: parsed.data.business_name ?? null,
       vat_rate: parsed.data.vat_rate,
-      paycheck_percent: parsed.data.paycheck_percent,
+      authorities_pct: parsed.data.authorities_pct,
       vat_report_frequency: parsed.data.vat_report_frequency,
     },
     { onConflict: 'user_id' }

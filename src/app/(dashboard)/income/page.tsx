@@ -10,12 +10,12 @@ export default async function IncomePage() {
   const [{ data: products }, { data: incomeRows }, { data: snapshots }] = await Promise.all([
     supabase
       .from('products')
-      .select('id, name, description')
+      .select('id, name, description, default_work_hours')
       .eq('user_id', user.id)
       .order('name'),
     supabase
       .from('income')
-      .select('id, product_name, product_id, order_id, original_price, discount_amount, final_price, delivery_amount, income_date, notes, source')
+      .select('id, product_name, product_id, order_id, original_price, discount_amount, final_price, delivery_amount, work_hours, income_date, notes, source')
       .eq('user_id', user.id)
       .order('income_date', { ascending: false }),
     supabase

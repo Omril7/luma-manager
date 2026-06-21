@@ -62,7 +62,7 @@ interface Props {
   currentMonth: string
   authorityPayments: AuthorityPayment[]
   personalProvisions: PersonalProvision[]
-  paycheckPercent: number
+  authoritiesPct: number
   balanceRows: MonthRow[]
 }
 
@@ -99,7 +99,7 @@ export default function DashboardClient({
   currentMonth,
   authorityPayments,
   personalProvisions,
-  paycheckPercent,
+  authoritiesPct,
   balanceRows,
 }: Props) {
   const router = useRouter()
@@ -1060,7 +1060,7 @@ export default function DashboardClient({
               </p>
               <div className="text-sm text-muted-foreground bg-muted/50 rounded-lg px-3 py-2.5 space-y-1">
                 <div className="flex justify-between">
-                  <span>משכורת ({paycheckPercent}% מהרווח הגולמי)</span>
+                  <span>משכורת ({authoritiesPct}% ניכויים)</span>
                   <span className="font-medium text-foreground">{formatILS(closingRow?.salary ?? 0)}</span>
                 </div>
                 <div className="flex justify-between">

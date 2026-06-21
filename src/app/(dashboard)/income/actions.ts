@@ -9,6 +9,7 @@ import { revalidatePath } from 'next/cache'
 const productSchema = z.object({
   name: z.string().min(1, 'שם מוצר נדרש'),
   description: z.string().optional(),
+  default_work_hours: z.coerce.number().min(0).default(0),
 })
 
 export async function createProduct(_prev: unknown, formData: FormData) {
@@ -19,6 +20,7 @@ export async function createProduct(_prev: unknown, formData: FormData) {
   const parsed = productSchema.safeParse({
     name: formData.get('name'),
     description: formData.get('description') || undefined,
+    default_work_hours: formData.get('default_work_hours') || 0,
   })
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
@@ -26,6 +28,7 @@ export async function createProduct(_prev: unknown, formData: FormData) {
     user_id: user.id,
     name: parsed.data.name,
     description: parsed.data.description ?? null,
+    default_work_hours: parsed.data.default_work_hours,
   })
   if (error) return { error: error.message }
   revalidatePath('/income')
@@ -41,12 +44,14 @@ export async function updateProduct(_prev: unknown, formData: FormData) {
   const parsed = productSchema.safeParse({
     name: formData.get('name'),
     description: formData.get('description') || undefined,
+    default_work_hours: formData.get('default_work_hours') || 0,
   })
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
   const { error } = await supabase.from('products').update({
     name: parsed.data.name,
     description: parsed.data.description ?? null,
+    default_work_hours: parsed.data.default_work_hours,
   }).eq('id', id).eq('user_id', user.id)
   if (error) return { error: error.message }
   revalidatePath('/income')
@@ -75,6 +80,7 @@ const incomeSchema = z.object({
   has_discount: z.boolean().default(false),
   discount_amount: z.coerce.number().nonnegative().default(0),
   delivery_amount: z.coerce.number().nonnegative().default(0),
+  work_hours: z.coerce.number().nonnegative().default(0),
   income_date: z.string().min(1, 'תאריך נדרש'),
   notes: z.string().optional(),
 })
@@ -93,6 +99,7 @@ export async function createIncome(_prev: unknown, formData: FormData) {
     has_discount: hasDiscount,
     discount_amount: hasDiscount ? formData.get('discount_amount') : 0,
     delivery_amount: formData.get('delivery_amount') || 0,
+    work_hours: formData.get('work_hours') || 0,
     income_date: formData.get('income_date'),
     notes: formData.get('notes') || undefined,
   })
@@ -111,6 +118,7 @@ export async function createIncome(_prev: unknown, formData: FormData) {
     discount_amount: discountAmount,
     final_price: finalPrice,
     delivery_amount: parsed.data.delivery_amount,
+    work_hours: parsed.data.work_hours,
     income_date: parsed.data.income_date,
     notes: parsed.data.notes ?? null,
   })
@@ -134,6 +142,7 @@ export async function updateIncome(_prev: unknown, formData: FormData) {
     has_discount: hasDiscount,
     discount_amount: hasDiscount ? formData.get('discount_amount') : 0,
     delivery_amount: formData.get('delivery_amount') || 0,
+    work_hours: formData.get('work_hours') || 0,
     income_date: formData.get('income_date'),
     notes: formData.get('notes') || undefined,
   })
@@ -150,6 +159,7 @@ export async function updateIncome(_prev: unknown, formData: FormData) {
     discount_amount: discountAmount,
     final_price: finalPrice,
     delivery_amount: parsed.data.delivery_amount,
+    work_hours: parsed.data.work_hours,
     income_date: parsed.data.income_date,
     notes: parsed.data.notes ?? null,
   }).eq('id', incomeId).eq('user_id', user.id)

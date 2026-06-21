@@ -15,6 +15,7 @@ type Product = {
   id: string
   name: string
   description: string | null
+  default_work_hours: number
 }
 
 type IncomeRow = {
@@ -26,6 +27,7 @@ type IncomeRow = {
   discount_amount: number
   final_price: number
   delivery_amount: number
+  work_hours: number
   income_date: string
   notes: string | null
   source: string

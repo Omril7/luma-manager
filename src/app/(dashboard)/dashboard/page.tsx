@@ -25,7 +25,7 @@ export default async function DashboardPage() {
     { data: allProvisions },
     { data: personalProvisions },
   ] = await Promise.all([
-    supabase.from('settings').select('paycheck_percent, opening_balance').eq('user_id', user.id).single(),
+    supabase.from('settings').select('authorities_pct, default_hourly_rate, opening_balance').eq('user_id', user.id).single(),
     // all authority payments
     supabase
       .from('authority_payments')
@@ -47,7 +47,7 @@ export default async function DashboardPage() {
     // all income for running balance
     supabase
       .from('income')
-      .select('final_price, income_date')
+      .select('final_price, income_date, work_hours')
       .eq('user_id', user.id),
     // all authority payments for running balance
     supabase
@@ -67,7 +67,8 @@ export default async function DashboardPage() {
       .order('payment_month', { ascending: false }),
   ])
 
-  const paycheckPercent = settings?.paycheck_percent ?? 30
+  const authoritiesPct = settings?.authorities_pct ?? 47
+  const hourlyRate = settings?.default_hourly_rate ?? 0
   const openingBalance = settings?.opening_balance ?? 0
 
   // Build running balance rows for the last 12 months + current
@@ -78,9 +79,11 @@ export default async function DashboardPage() {
 
   // Group income/expenses/authority by month
   const incomeByMonth = new Map<string, number>()
+  const hoursForMonth = new Map<string, number>()
   for (const r of allIncome ?? []) {
     const ym = toYM(r.income_date)
     incomeByMonth.set(ym, (incomeByMonth.get(ym) ?? 0) + r.final_price)
+    hoursForMonth.set(ym, (hoursForMonth.get(ym) ?? 0) + ((r as { work_hours?: number }).work_hours ?? 0))
   }
 
   const expensesByMonth = new Map<string, number>()
@@ -135,7 +138,8 @@ export default async function DashboardPage() {
     const authority = authorityBreakdown.income_tax + authorityBreakdown.social_security + authorityBreakdown.vat
     const provisions = provisionsByMonth.get(month) ?? 0
     const grossP = income - expenses
-    const sal = grossP * (paycheckPercent / 100)
+    const workHours = hoursForMonth.get(month) ?? 0
+    const sal = workHours * hourlyRate * (100 - authoritiesPct) / 100
     const isLive = month === currentMonth && !snap?.approved_at
 
     if (snap?.approved_at) {
@@ -184,7 +188,7 @@ export default async function DashboardPage() {
       currentMonth={currentMonth}
       authorityPayments={(authorityPayments ?? []) as { id: string; type: string; amount: number; payment_month: string; notes: string | null }[]}
       personalProvisions={(personalProvisions ?? []) as { id: string; type: string; amount: number; payment_month: string; notes: string | null }[]}
-      paycheckPercent={paycheckPercent}
+      authoritiesPct={authoritiesPct}
       balanceRows={balanceRows}
     />
   )

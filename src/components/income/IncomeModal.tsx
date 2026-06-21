@@ -11,11 +11,11 @@ import { Textarea } from '@/components/ui/textarea'
 import { DatePicker } from '@/components/ui/date-picker'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 
-type Product = { id: string; name: string }
+type Product = { id: string; name: string; default_work_hours: number }
 type IncomeRow = {
   id: string; product_name: string; product_id: string | null; order_id: string | null
   original_price: number; discount_amount: number; final_price: number
-  delivery_amount: number; income_date: string; notes: string | null
+  delivery_amount: number; work_hours: number; income_date: string; notes: string | null
 }
 type Props = { products: Product[]; income?: IncomeRow; closedMonths: string[]; onClose: () => void }
 
@@ -30,12 +30,21 @@ export default function IncomeModal({ products, income, closedMonths, onClose }:
   const [originalPrice, setOriginalPrice] = useState(income?.original_price ?? 0)
   const [discountAmount, setDiscountAmount] = useState(income?.discount_amount ?? 0)
   const [deliveryAmount, setDeliveryAmount] = useState(income?.delivery_amount ?? 0)
+  const [workHours, setWorkHours] = useState(income?.work_hours ?? 0)
   const [useProduct, setUseProduct] = useState(!!income?.product_id)
   const [incomeDate, setIncomeDate] = useState(income?.income_date ?? new Date().toISOString().slice(0, 10))
   const formRef = useRef<HTMLFormElement>(null)
 
   const finalPrice = originalPrice - (hasDiscount ? discountAmount : 0)
   const productIncome = finalPrice - deliveryAmount
+
+  function handleProductChange(productId: string) {
+    const product = products.find(p => p.id === productId)
+    if (!product) return
+    const nameInput = formRef.current?.querySelector<HTMLInputElement>('[name="product_name"]')
+    if (nameInput) nameInput.value = product.name
+    if (product.default_work_hours > 0) setWorkHours(product.default_work_hours)
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -81,11 +90,7 @@ export default function IncomeModal({ products, income, closedMonths, onClose }:
               <select
                 name="product_id"
                 defaultValue={income?.product_id ?? ''}
-                onChange={e => {
-                  const product = products.find(p => p.id === e.target.value)
-                  const nameInput = formRef.current?.querySelector<HTMLInputElement>('[name="product_name"]')
-                  if (nameInput && product) nameInput.value = product.name
-                }}
+                onChange={e => handleProductChange(e.target.value)}
                 className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
               >
                 <option value="">בחר מוצר...</option>
@@ -115,6 +120,24 @@ export default function IncomeModal({ products, income, closedMonths, onClose }:
               <Label>תאריך *</Label>
               <DatePicker name="income_date" value={incomeDate} onChange={setIncomeDate} />
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="work_hours">שעות עבודה</Label>
+            <div className="relative">
+              <Input
+                id="work_hours"
+                name="work_hours"
+                type="number"
+                step="0.5"
+                min="0"
+                value={workHours}
+                onChange={e => setWorkHours(Number(e.target.value))}
+                className="pl-10"
+              />
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">ש׳</span>
+            </div>
+            <p className="text-xs text-muted-foreground">שעות שהושקעו — משמש לחישוב השכר</p>
           </div>
 
           <div className="space-y-2">

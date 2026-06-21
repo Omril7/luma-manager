@@ -23,6 +23,7 @@ export interface Settings {
   yearly_kilometers: number | null
   cost_per_km: number | null
   vat_report_frequency: string | null
+  authorities_pct: number | null
 }
 
 interface SettingsStore {
