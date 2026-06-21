@@ -22,6 +22,8 @@ export default async function DashboardPage() {
     { data: allInstallments },
     { data: allIncome },
     { data: allAuthority },
+    { data: allProvisions },
+    { data: personalProvisions },
   ] = await Promise.all([
     supabase.from('settings').select('paycheck_percent, opening_balance').eq('user_id', user.id).single(),
     // all authority payments
@@ -36,7 +38,7 @@ export default async function DashboardPage() {
       .select('snapshot_month, opening_balance, closing_balance, approved_at')
       .eq('user_id', user.id)
       .order('snapshot_month', { ascending: true }),
-    // all installments for running balance (past 12 months)
+    // all installments for running balance
     supabase
       .from('expense_installments')
       .select('amount, due_month, expenses!inner(is_personal, user_id)')
@@ -52,6 +54,17 @@ export default async function DashboardPage() {
       .from('authority_payments')
       .select('amount, payment_month, type')
       .eq('user_id', user.id),
+    // all personal provisions for running balance
+    supabase
+      .from('personal_provisions')
+      .select('amount, payment_month')
+      .eq('user_id', user.id),
+    // all personal provisions for the card (with full details)
+    supabase
+      .from('personal_provisions')
+      .select('id, type, amount, payment_month, notes')
+      .eq('user_id', user.id)
+      .order('payment_month', { ascending: false }),
   ])
 
   const paycheckPercent = settings?.paycheck_percent ?? 30
@@ -86,16 +99,23 @@ export default async function DashboardPage() {
     authorityByMonth.set(ym, existing)
   }
 
+  const provisionsByMonth = new Map<string, number>()
+  for (const r of allProvisions ?? []) {
+    const ym = toYM(r.payment_month)
+    provisionsByMonth.set(ym, (provisionsByMonth.get(ym) ?? 0) + r.amount)
+  }
+
   // Collect all months that have data, plus current
   const allMonths = new Set<string>([
     ...Array.from(incomeByMonth.keys()),
     ...Array.from(expensesByMonth.keys()),
     ...Array.from(authorityByMonth.keys()),
+    ...Array.from(provisionsByMonth.keys()),
     ...Array.from(snapshotMap.keys()),
     currentMonth,
   ])
 
-  const sortedMonths = Array.from(allMonths).sort()
+  const sortedMonths = Array.from(allMonths).sort((a, b) => a.localeCompare(b))
 
   // Build rows with running balance
   let runningBalance = openingBalance
@@ -113,6 +133,7 @@ export default async function DashboardPage() {
     const expenses = expensesByMonth.get(month) ?? 0
     const authorityBreakdown = authorityByMonth.get(month) ?? { income_tax: 0, social_security: 0, vat: 0 }
     const authority = authorityBreakdown.income_tax + authorityBreakdown.social_security + authorityBreakdown.vat
+    const provisions = provisionsByMonth.get(month) ?? 0
     const grossP = income - expenses
     const sal = grossP * (paycheckPercent / 100)
     const isLive = month === currentMonth && !snap?.approved_at
@@ -126,6 +147,7 @@ export default async function DashboardPage() {
         expenses,
         authority,
         ...authorityBreakdown,
+        provisions,
         salary: sal,
         closing: snap.closing_balance,
         isLive: false,
@@ -136,7 +158,7 @@ export default async function DashboardPage() {
     }
 
     const opening = runningBalance
-    const closing = opening + grossP - sal - authority
+    const closing = opening + grossP - sal - authority - provisions
     runningBalance = closing
 
     return {
@@ -147,6 +169,7 @@ export default async function DashboardPage() {
       expenses,
       authority,
       ...authorityBreakdown,
+      provisions,
       salary: sal,
       closing,
       isLive,
@@ -154,10 +177,13 @@ export default async function DashboardPage() {
     }
   })
 
+  balanceRows.reverse() // most recent month first for display
+
   return (
     <DashboardClient
       currentMonth={currentMonth}
       authorityPayments={(authorityPayments ?? []) as { id: string; type: string; amount: number; payment_month: string; notes: string | null }[]}
+      personalProvisions={(personalProvisions ?? []) as { id: string; type: string; amount: number; payment_month: string; notes: string | null }[]}
       paycheckPercent={paycheckPercent}
       balanceRows={balanceRows}
     />

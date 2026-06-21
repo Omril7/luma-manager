@@ -474,6 +474,36 @@ export type Database = {
         }
         Relationships: []
       }
+      personal_provisions: {
+        Row: {
+          id: string
+          user_id: string
+          type: string
+          amount: number
+          payment_month: string
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          type: string
+          amount: number
+          payment_month: string
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          type?: string
+          amount?: number
+          payment_month?: string
+          notes?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       balance_snapshots: {
         Row: {
           id: string

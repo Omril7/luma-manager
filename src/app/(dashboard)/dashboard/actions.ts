@@ -93,6 +93,55 @@ export async function deleteSnapshot(snapshotMonth: string) {
   return { success: true }
 }
 
+const provisionSchema = z.object({
+  type: z.enum(['pension', 'study_fund', 'other']),
+  amount: z.coerce.number().positive('סכום חייב להיות חיובי'),
+  payment_month: z.string().min(1, 'חודש נדרש'),
+  notes: z.string().optional(),
+})
+
+export async function createProvision(_prev: unknown, formData: FormData) {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'לא מחובר' }
+
+  const parsed = provisionSchema.safeParse({
+    type: formData.get('type'),
+    amount: formData.get('amount'),
+    payment_month: formData.get('payment_month'),
+    notes: formData.get('notes') || undefined,
+  })
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
+  const { error } = await supabase.from('personal_provisions').insert({
+    user_id: user.id,
+    type: parsed.data.type,
+    amount: parsed.data.amount,
+    payment_month: parsed.data.payment_month + '-01',
+    notes: parsed.data.notes ?? null,
+  })
+  if (error) return { error: error.message }
+
+  revalidatePath('/dashboard')
+  return { success: true }
+}
+
+export async function deleteProvision(id: string) {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'לא מחובר' }
+
+  const { error } = await supabase
+    .from('personal_provisions')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', user.id)
+  if (error) return { error: error.message }
+
+  revalidatePath('/dashboard')
+  return { success: true }
+}
+
 export async function updatePaycheckPercent(percent: number) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()

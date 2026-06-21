@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { createAuthorityPayment, deleteAuthorityPayment, approveMonthClose, deleteSnapshot } from '@/app/(dashboard)/dashboard/actions'
+import { createAuthorityPayment, deleteAuthorityPayment, approveMonthClose, deleteSnapshot, createProvision, deleteProvision } from '@/app/(dashboard)/dashboard/actions'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { MonthPicker, type MonthPickerValue } from '@/components/ui/month-picker'
+import { formatILS } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DataTable, type DataTableColumn, type DataTablePagination } from '@/components/ui/data-table'
 import { Trash2, Plus, CheckCircle, ChevronRight, ChevronLeft } from 'lucide-react'
@@ -32,6 +33,14 @@ interface AuthorityPayment {
   notes: string | null
 }
 
+interface PersonalProvision {
+  id: string
+  type: string
+  amount: number
+  payment_month: string
+  notes: string | null
+}
+
 interface MonthRow {
   month: string
   label: string
@@ -42,6 +51,7 @@ interface MonthRow {
   income_tax: number
   social_security: number
   vat: number
+  provisions: number
   salary: number
   closing: number
   isLive: boolean
@@ -51,6 +61,7 @@ interface MonthRow {
 interface Props {
   currentMonth: string
   authorityPayments: AuthorityPayment[]
+  personalProvisions: PersonalProvision[]
   paycheckPercent: number
   balanceRows: MonthRow[]
 }
@@ -67,9 +78,12 @@ const TYPE_LABELS: Record<string, string> = {
   vat: 'מע"מ',
 }
 
-function ils(n: number) {
-  return n.toLocaleString('he-IL', { style: 'currency', currency: 'ILS', maximumFractionDigits: 0 })
+const PROVISION_TYPE_LABELS: Record<string, string> = {
+  pension: 'פנסיה',
+  study_fund: 'קרן השתלמות',
+  other: 'אחר',
 }
+
 
 function monthLabel(ym: string) {
   const [year, month] = ym.split('-')
@@ -84,6 +98,7 @@ function toMonthPickerValue(ym: string): MonthPickerValue {
 export default function DashboardClient({
   currentMonth,
   authorityPayments,
+  personalProvisions,
   paycheckPercent,
   balanceRows,
 }: Props) {
@@ -92,12 +107,18 @@ export default function DashboardClient({
     () => toMonthPickerValue(currentMonth)
   )
   const [showAddPayment, setShowAddPayment] = useState(false)
+  const [showAddProvision, setShowAddProvision] = useState(false)
   const [confirmClose, setConfirmClose] = useState<{ month: string; closing: number; opening: number } | null>(null)
   const [confirmDeleteSnapshot, setConfirmDeleteSnapshot] = useState<{ month: string; hasLaterSnapshots: boolean } | null>(null)
   const [isPending, startTransition] = useTransition()
   const [addError, setAddError] = useState('')
+  const [addProvisionError, setAddProvisionError] = useState('')
   const formRef = useRef<HTMLFormElement>(null)
+  const provisionFormRef = useRef<HTMLFormElement>(null)
   const [paymentMonth, setPaymentMonth] = useState<MonthPickerValue>(
+    () => toMonthPickerValue(currentMonth)
+  )
+  const [provisionMonth, setProvisionMonth] = useState<MonthPickerValue>(
     () => toMonthPickerValue(currentMonth)
   )
   const [balancePage, setBalancePage] = useState(0)
@@ -113,9 +134,11 @@ export default function DashboardClient({
   const displayGrossProfit = displayIncome - displayExpenses
   const displaySalary = selectedRow?.salary ?? 0
   const displayAuthority = selectedRow?.authority ?? 0
-  const displayMonthlyBalance = displayGrossProfit - displaySalary - displayAuthority
+  const displayProvisions = selectedRow?.provisions ?? 0
+  const displayMonthlyBalance = displayGrossProfit - displaySalary - displayAuthority - displayProvisions
 
-  const latestClosing = balanceRows[balanceRows.length - 1]?.closing ?? 0
+  const latestRow = balanceRows.length > 0 ? balanceRows.reduce((a, b) => a.month > b.month ? a : b) : null
+  const latestClosing = latestRow?.closing ?? 0
 
   const closedMonthSet = new Set(balanceRows.filter(r => r.isApproved).map(r => r.month))
   const selectedPaymentYM = `${paymentMonth.year}-${String(paymentMonth.month).padStart(2, '0')}`
@@ -125,6 +148,15 @@ export default function DashboardClient({
     p => p.payment_month.slice(0, 7) === selectedMonth
   )
   const filteredAuthorityTotal = filteredAuthorityPayments.reduce((s, p) => s + p.amount, 0)
+
+  const filteredProvisions = personalProvisions.filter(
+    p => p.payment_month.slice(0, 7) === selectedMonth
+  )
+  const filteredProvisionsTotal = filteredProvisions.reduce((s, p) => s + p.amount, 0)
+
+  const isAddingProvisionToClosedMonth = closedMonthSet.has(
+    `${provisionMonth.year}-${String(provisionMonth.month).padStart(2, '0')}`
+  )
 
   const availableYears = Array.from(new Set(balanceRows.map(r => Number(r.month.slice(0, 4))))).sort()
   const minYear = availableYears[0] ?? currentYear
@@ -165,6 +197,31 @@ export default function DashboardClient({
     })
   }
 
+  function handleDeleteProvision(id: string) {
+    startTransition(async () => {
+      const res = await deleteProvision(id)
+      if (res && 'error' in res && res.error) toast.error(res.error)
+      else toast.success('הפרשה נמחקה')
+    })
+  }
+
+  function handleAddProvision(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setAddProvisionError('')
+    const fd = new FormData(e.currentTarget)
+    startTransition(async () => {
+      const res = await createProvision(null, fd)
+      if (res && 'error' in res && res.error) {
+        setAddProvisionError(res.error)
+        toast.error(res.error)
+      } else {
+        toast.success('הפרשה נוספה')
+        setShowAddProvision(false)
+        provisionFormRef.current?.reset()
+      }
+    })
+  }
+
   function handleApprove() {
     if (!confirmClose) return
     startTransition(async () => {
@@ -201,7 +258,7 @@ export default function DashboardClient({
     {
       key: 'amount',
       header: 'סכום',
-      cell: row => ils(row.amount),
+      cell: row => formatILS(row.amount),
     },
     {
       key: 'notes',
@@ -230,7 +287,51 @@ export default function DashboardClient({
   const authorityFooter = (
     <tr className="font-semibold bg-muted/50">
       <td className="py-2.5">סה&quot;כ</td>
-      <td className="py-2.5">{ils(filteredAuthorityTotal)}</td>
+      <td className="py-2.5">{formatILS(filteredAuthorityTotal)}</td>
+      <td />
+      <td />
+    </tr>
+  )
+
+  const provisionColumns: DataTableColumn<PersonalProvision>[] = [
+    {
+      key: 'type',
+      header: 'סוג',
+      cell: row => PROVISION_TYPE_LABELS[row.type] ?? row.type,
+    },
+    {
+      key: 'amount',
+      header: 'סכום',
+      cell: row => formatILS(row.amount),
+    },
+    {
+      key: 'notes',
+      header: 'הערות',
+      className: 'text-muted-foreground',
+      cell: row => row.notes ?? '—',
+    },
+    {
+      key: 'actions',
+      header: '',
+      headerClassName: 'w-10',
+      cell: row => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleDeleteProvision(row.id)}
+          disabled={isPending}
+          className="text-red-500 hover:text-red-700 h-7 w-7 p-0"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      ),
+    },
+  ]
+
+  const provisionFooter = (
+    <tr className="font-semibold bg-muted/50">
+      <td className="py-2.5">סה&quot;כ</td>
+      <td className="py-2.5">{formatILS(filteredProvisionsTotal)}</td>
       <td />
       <td />
     </tr>
@@ -252,50 +353,56 @@ export default function DashboardClient({
     {
       key: 'opening',
       header: 'יתרה פתיחה',
-      cell: row => ils(row.opening),
+      cell: row => formatILS(row.opening),
     },
     {
       key: 'income',
       header: 'הכנסות',
       className: 'text-green-700',
-      cell: row => ils(row.income),
+      cell: row => formatILS(row.income),
     },
     {
       key: 'expenses',
       header: 'הוצאות',
       className: 'text-red-600',
-      cell: row => ils(row.expenses),
+      cell: row => formatILS(row.expenses),
     },
     {
       key: 'income_tax',
       header: 'מס הכנסה',
       className: 'text-orange-600',
-      cell: row => ils(row.income_tax),
+      cell: row => formatILS(row.income_tax),
     },
     {
       key: 'social_security',
       header: 'ביטוח לאומי',
       className: 'text-orange-600',
-      cell: row => ils(row.social_security),
+      cell: row => formatILS(row.social_security),
     },
     {
       key: 'vat',
       header: 'מע"מ',
       className: 'text-orange-600',
-      cell: row => ils(row.vat),
+      cell: row => formatILS(row.vat),
+    },
+    {
+      key: 'provisions',
+      header: 'הפרשות',
+      className: 'text-blue-600',
+      cell: row => formatILS(row.provisions),
     },
     {
       key: 'salary',
       header: 'משכורת',
       className: 'text-purple-600',
-      cell: row => ils(row.salary),
+      cell: row => formatILS(row.salary),
     },
     {
       key: 'closing',
       header: 'יתרה סגירה',
       cell: row => (
         <span className={`font-semibold ${row.closing >= 0 ? 'text-green-700' : 'text-red-600'}`}>
-          {ils(row.closing)}
+          {formatILS(row.closing)}
         </span>
       ),
     },
@@ -346,10 +453,18 @@ export default function DashboardClient({
   }
 
   const FORECAST_SOURCE_MONTHS = 12
-  const forecastSourceCount = Math.min(FORECAST_SOURCE_MONTHS, balanceRows.length)
+
+  // historical rows = current month and earlier (future entries don't inform the model)
+  const forecastSourceCount = Math.min(
+    FORECAST_SOURCE_MONTHS,
+    balanceRows.filter(r => r.month <= currentMonth).length
+  )
 
   const forecastRows = useMemo(() => {
-    const source = balanceRows.slice(-forecastSourceCount)
+    const sortedAsc = [...balanceRows].sort((a, b) => a.month.localeCompare(b.month))
+    // only past + current months feed the statistical model
+    const historicalRows = sortedAsc.filter(r => r.month <= currentMonth)
+    const source = historicalRows.slice(-FORECAST_SOURCE_MONTHS)
     if (source.length === 0) return []
 
     // ---- helpers -------------------------------------------------------
@@ -473,53 +588,64 @@ export default function DashboardClient({
     const incomeTaxVals = source.map(r => r.income_tax)
     const socialSecurityVals = source.map(r => r.social_security)
     const vatVals = source.map(r => r.vat)
+    const provisionVals = source.map(r => r.provisions)
 
     // Salary is a step function (percentage-of-profit policy, or a fixed figure) —
     // carry forward the most recent actual value rather than averaging/trending it.
     const lastSalary = source[source.length - 1]?.salary ?? 0
 
-    // Seasonal anchors: same calendar month one year back, if it exists in balanceRows
-    // (not just the trimmed `source` window) — look it up by month key directly.
+    // Seasonal anchor: same calendar month last year, historical data only.
     function seasonalLookup(fn: (r: MonthRow) => number, targetMonth: string): number | null {
       const [yr, mo] = targetMonth.split('-').map(Number)
       const lastYearKey = `${yr - 1}-${String(mo).padStart(2, '0')}`
-      const match = balanceRows.find(r => r.month === lastYearKey)
+      const match = historicalRows.find(r => r.month === lastYearKey)
       return match ? fn(match) : null
     }
 
-    const lastMonth = balanceRows[balanceRows.length - 1]?.month ?? currentMonth
-    let opening = balanceRows[balanceRows.length - 1]?.closing ?? 0
+    // Always forecast the 3 months following currentMonth.
+    // Opening balance chains from currentMonth's closing.
+    const currentMonthRow = sortedAsc.find(r => r.month === currentMonth)
+    let opening = currentMonthRow?.closing ?? 0
+
+    const [curYr, curMo] = currentMonth.split('-').map(Number)
 
     return Array.from({ length: 3 }, (_, i) => {
       const stepsAhead = i + 1
-      const [yr, mo] = lastMonth.split('-').map(Number)
-      const d = new Date(yr, mo - 1 + stepsAhead)
+      const d = new Date(curYr, curMo - 1 + stepsAhead)
       const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+
+      // If the user already entered data for this future month, use it directly.
+      const actual = sortedAsc.find(r => r.month === month)
 
       const incomeSeasonal = seasonalLookup(r => r.income, month)
       const expensesSeasonal = seasonalLookup(r => r.expenses, month)
 
-      const income = Math.max(0, forecastSmooth(incomeVals, stepsAhead, incomeSeasonal))
-      const expenses = Math.max(0, forecastSmooth(expenseVals, stepsAhead, expensesSeasonal))
-      const incomeTax = Math.max(0, forecastCyclical(incomeTaxVals, stepsAhead))
-      const socialSecurity = Math.max(0, forecastCyclical(socialSecurityVals, stepsAhead))
-      const vat = Math.max(0, forecastCyclical(vatVals, stepsAhead))
+      // Per-field: use actual if the user has entered something (> 0), else use the
+      // statistical forecast. This way one expense in July doesn't zero-out income.
+      const actual$ = (v: number | undefined, fb: number) => (v !== undefined && v > 0) ? v : fb
+      const income    = actual$(actual?.income,         Math.max(0, forecastSmooth(incomeVals,         stepsAhead, incomeSeasonal)))
+      const expenses  = actual$(actual?.expenses,       Math.max(0, forecastSmooth(expenseVals,        stepsAhead, expensesSeasonal)))
+      const incomeTax = actual$(actual?.income_tax,     Math.max(0, forecastCyclical(incomeTaxVals,    stepsAhead)))
+      const socialSecurity = actual$(actual?.social_security, Math.max(0, forecastCyclical(socialSecurityVals, stepsAhead)))
+      const vat       = actual$(actual?.vat,            Math.max(0, forecastCyclical(vatVals,          stepsAhead)))
+      const provisions = actual$(actual?.provisions,   Math.max(0, forecastCyclical(provisionVals,    stepsAhead)))
       const authority = incomeTax + socialSecurity + vat
 
       const grossP = income - expenses
       const salary = lastSalary
-      const closing = opening + grossP - salary - authority
+      const closing = opening + grossP - salary - authority - provisions
 
       const row: MonthRow = {
         month, label: month, opening,
         income, expenses,
         authority, income_tax: incomeTax, social_security: socialSecurity, vat,
+        provisions,
         salary, closing, isLive: false, isApproved: false,
       }
       opening = closing
       return row
     })
-  }, [balanceRows, forecastSourceCount, currentMonth])
+  }, [balanceRows, currentMonth])
 
   const forecastColumns: DataTableColumn<MonthRow>[] = [
     {
@@ -528,23 +654,24 @@ export default function DashboardClient({
       cell: row => (
         <span className="flex items-center gap-1">
           {monthLabel(row.month)}
-          <span className="text-xs text-muted-foreground">(תחזית)</span>
+          <span className="text-xs text-muted-foreground">{row.isApproved ? '(בפועל)' : '(תחזית)'}</span>
         </span>
       ),
     },
-    { key: 'opening', header: 'יתרה פתיחה', cell: row => ils(row.opening) },
-    { key: 'income', header: 'הכנסות', className: 'text-green-700', cell: row => ils(row.income) },
-    { key: 'expenses', header: 'הוצאות', className: 'text-red-600', cell: row => ils(row.expenses) },
-    { key: 'income_tax', header: 'מס הכנסה', className: 'text-orange-600', cell: row => ils(row.income_tax) },
-    { key: 'social_security', header: 'ביטוח לאומי', className: 'text-orange-600', cell: row => ils(row.social_security) },
-    { key: 'vat', header: 'מע"מ', className: 'text-orange-600', cell: row => ils(row.vat) },
-    { key: 'salary', header: 'משכורת', className: 'text-purple-600', cell: row => ils(row.salary) },
+    { key: 'opening', header: 'יתרה פתיחה', cell: row => formatILS(row.opening) },
+    { key: 'income', header: 'הכנסות', className: 'text-green-700', cell: row => formatILS(row.income) },
+    { key: 'expenses', header: 'הוצאות', className: 'text-red-600', cell: row => formatILS(row.expenses) },
+    { key: 'income_tax', header: 'מס הכנסה', className: 'text-orange-600', cell: row => formatILS(row.income_tax) },
+    { key: 'social_security', header: 'ביטוח לאומי', className: 'text-orange-600', cell: row => formatILS(row.social_security) },
+    { key: 'vat', header: 'מע"מ', className: 'text-orange-600', cell: row => formatILS(row.vat) },
+    { key: 'provisions', header: 'הפרשות', className: 'text-blue-600', cell: row => formatILS(row.provisions) },
+    { key: 'salary', header: 'משכורת', className: 'text-purple-600', cell: row => formatILS(row.salary) },
     {
       key: 'closing',
       header: 'יתרה סגירה',
       cell: row => (
         <span className={`font-semibold ${row.closing >= 0 ? 'text-green-700' : 'text-red-600'}`}>
-          {ils(row.closing)}
+          {formatILS(row.closing)}
         </span>
       ),
     },
@@ -566,45 +693,78 @@ export default function DashboardClient({
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
-        <SummaryCard label="יתרה שוטפת" value={ils(latestClosing)} highlight={latestClosing >= 0 ? 'green' : 'red'} pinned />
-        <SummaryCard label="הכנסות" month={monthLabel(selectedMonth)} value={ils(displayIncome)} />
-        <SummaryCard label="הוצאות" month={monthLabel(selectedMonth)} value={ils(displayExpenses)} />
-        <SummaryCard label="רווח" month={monthLabel(selectedMonth)} value={ils(displayGrossProfit)} highlight={displayGrossProfit >= 0 ? 'green' : 'red'} />
-        <SummaryCard label="משכורת לעצמי" month={monthLabel(selectedMonth)} value={ils(displaySalary)} />
-        <SummaryCard label="יתרה לעסק" month={monthLabel(selectedMonth)} value={ils(displayMonthlyBalance)} highlight={displayMonthlyBalance >= 0 ? 'green' : 'red'} />
+        <SummaryCard label="יתרה שוטפת" value={formatILS(latestClosing)} highlight={latestClosing >= 0 ? 'green' : 'red'} pinned />
+        <SummaryCard label="הכנסות" month={monthLabel(selectedMonth)} value={formatILS(displayIncome)} />
+        <SummaryCard label="הוצאות" month={monthLabel(selectedMonth)} value={formatILS(displayExpenses)} />
+        <SummaryCard label="רווח" month={monthLabel(selectedMonth)} value={formatILS(displayGrossProfit)} highlight={displayGrossProfit >= 0 ? 'green' : 'red'} />
+        <SummaryCard label="משכורת לעצמי" month={monthLabel(selectedMonth)} value={formatILS(displaySalary)} />
+        <SummaryCard label="יתרה לעסק" month={monthLabel(selectedMonth)} value={formatILS(displayMonthlyBalance)} highlight={displayMonthlyBalance >= 0 ? 'green' : 'red'} />
       </div>
 
-      {/* Authority Payments */}
-      <Card>
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <CardTitle className="text-base font-semibold">
-              תשלומים לרשויות — {monthLabel(selectedMonth)}
-            </CardTitle>
-            <Button
-              size="sm"
-              onClick={() => { setPaymentMonth(selectedMonthValue); setShowAddPayment(true) }}
-              className="px-6"
-            >
-              <Plus className="h-4 w-4 ml-1" />
-              הוסף תשלום
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {filteredAuthorityPayments.length === 0 ? (
-            <p className="text-muted-foreground text-sm">אין תשלומים לרשויות בחודש זה</p>
-          ) : (
-            <DataTable
-              columns={authorityColumns}
-              data={filteredAuthorityPayments}
-              rowKey={row => row.id}
-              footerRow={authorityFooter}
-              emptyMessage="אין תשלומים לרשויות בחודש זה"
-            />
-          )}
-        </CardContent>
-      </Card>
+      {/* Authority Payments + Personal Provisions */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <CardTitle className="text-base font-semibold">
+                תשלומים לרשויות — {monthLabel(selectedMonth)}
+              </CardTitle>
+              <Button
+                size="sm"
+                onClick={() => { setPaymentMonth(selectedMonthValue); setShowAddPayment(true) }}
+                className="px-6"
+              >
+                <Plus className="h-4 w-4 ml-1" />
+                הוסף תשלום
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {filteredAuthorityPayments.length === 0 ? (
+              <p className="text-muted-foreground text-sm">אין תשלומים לרשויות בחודש זה</p>
+            ) : (
+              <DataTable
+                columns={authorityColumns}
+                data={filteredAuthorityPayments}
+                rowKey={row => row.id}
+                footerRow={authorityFooter}
+                emptyMessage="אין תשלומים לרשויות בחודש זה"
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <CardTitle className="text-base font-semibold">
+                הפרשות — {monthLabel(selectedMonth)}
+              </CardTitle>
+              <Button
+                size="sm"
+                onClick={() => { setProvisionMonth(selectedMonthValue); setShowAddProvision(true) }}
+                className="px-6"
+              >
+                <Plus className="h-4 w-4 ml-1" />
+                הוסף הפרשה
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {filteredProvisions.length === 0 ? (
+              <p className="text-muted-foreground text-sm">אין הפרשות בחודש זה</p>
+            ) : (
+              <DataTable
+                columns={provisionColumns}
+                data={filteredProvisions}
+                rowKey={row => row.id}
+                footerRow={provisionFooter}
+                emptyMessage="אין הפרשות בחודש זה"
+              />
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Add Authority Payment Modal */}
       <Dialog open={showAddPayment} onOpenChange={setShowAddPayment}>
@@ -652,6 +812,57 @@ export default function DashboardClient({
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setShowAddPayment(false)}>ביטול</Button>
               <Button type="submit" disabled={isPending || isAddingToClosedMonth}>שמור</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Personal Provision Modal */}
+      <Dialog open={showAddProvision} onOpenChange={setShowAddProvision}>
+        <DialogContent className="max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>הוסף הפרשה</DialogTitle>
+          </DialogHeader>
+          <form ref={provisionFormRef} onSubmit={handleAddProvision} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>סוג</Label>
+                <Select name="type" defaultValue="pension">
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pension">פנסיה</SelectItem>
+                    <SelectItem value="study_fund">קרן השתלמות</SelectItem>
+                    <SelectItem value="other">אחר</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>סכום</Label>
+                <div className="relative">
+                  <Input name="amount" type="number" min={0} step="0.01" required placeholder="0.00" className="pl-8" />
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">₪</span>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>חודש</Label>
+              <MonthPicker name="payment_month" value={provisionMonth} onChange={setProvisionMonth} />
+            </div>
+            <div className="space-y-1">
+              <Label>הערות (אופציונלי)</Label>
+              <Textarea name="notes" rows={2} placeholder="הערה..." />
+            </div>
+            {isAddingProvisionToClosedMonth && (
+              <p className="text-amber-600 text-sm bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
+                חודש זה סגור — לא ניתן להוסיף הפרשה. יש לפתוח את החודש מחדש בטבלת העובר ושב.
+              </p>
+            )}
+            {addProvisionError && <p className="text-red-500 text-sm">{addProvisionError}</p>}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowAddProvision(false)}>ביטול</Button>
+              <Button type="submit" disabled={isPending || isAddingProvisionToClosedMonth}>שמור</Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -721,7 +932,7 @@ export default function DashboardClient({
                   formatter={(value, name) => {
                     const labels: Record<string, string> = { income: 'הכנסות', expenses: 'הוצאות', profit: 'רווח' }
                     const n = typeof value === 'number' ? value : null
-                    return [n !== null ? ils(n) : '—', labels[String(name)] ?? String(name)]
+                    return [n !== null ? formatILS(n) : '—', labels[String(name)] ?? String(name)]
                   }}
                   labelStyle={{ fontWeight: 600, marginBottom: 4 }}
                 />
@@ -850,12 +1061,12 @@ export default function DashboardClient({
               <div className="text-sm text-muted-foreground bg-muted/50 rounded-lg px-3 py-2.5 space-y-1">
                 <div className="flex justify-between">
                   <span>משכורת ({paycheckPercent}% מהרווח הגולמי)</span>
-                  <span className="font-medium text-foreground">{ils(closingRow?.salary ?? 0)}</span>
+                  <span className="font-medium text-foreground">{formatILS(closingRow?.salary ?? 0)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>יתרה סופית</span>
                   <span className={`font-semibold ${confirmClose.closing >= 0 ? 'text-green-700' : 'text-red-600'}`}>
-                    {ils(confirmClose.closing)}
+                    {formatILS(confirmClose.closing)}
                   </span>
                 </div>
               </div>
