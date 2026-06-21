@@ -89,7 +89,7 @@ function GeneralSection({ settings }: { settings: Settings | null }) {
               defaultValue={settings?.authorities_pct ?? 47} className="pl-8" />
             <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">%</span>
           </div>
-          <p className="text-xs text-muted-foreground">מס + ביטוח לאומי על השכר</p>
+          <p className="text-xs text-muted-foreground">מס + ביטוח לאומי + פנסיה + קרן השתלמות</p>
         </div>
       </div>
       <div className="space-y-1.5">
