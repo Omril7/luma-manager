@@ -12,6 +12,7 @@ type Installment = {
   expenses: {
     is_personal: boolean
     expense_categories: { name: string } | null
+    expense_category_splits: { category_id: string | null; amount: number; expense_categories: { name: string } | null }[]
   } | null
 }
 
@@ -95,8 +96,17 @@ export default function ExpensesCharts({ installments, isAnnual, year, month }: 
   const monthInstallments = business.filter(i => i.due_month.slice(0, 7) === monthKey)
 
   const byCategory = monthInstallments.reduce<Record<string, number>>((acc, i) => {
-    const name = i.expenses?.expense_categories?.name ?? 'ללא קטגוריה'
-    acc[name] = (acc[name] ?? 0) + i.amount
+    const splits = i.expenses?.expense_category_splits ?? []
+    if (splits.length > 0) {
+      // Split expense: attribute each split's amount to its own category
+      for (const s of splits) {
+        const name = s.expense_categories?.name ?? 'ללא קטגוריה'
+        acc[name] = (acc[name] ?? 0) + s.amount
+      }
+    } else {
+      const name = i.expenses?.expense_categories?.name ?? 'ללא קטגוריה'
+      acc[name] = (acc[name] ?? 0) + i.amount
+    }
     return acc
   }, {})
 

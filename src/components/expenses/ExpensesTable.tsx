@@ -37,6 +37,7 @@ type Expense = {
   expense_categories: { id: string; name: string; is_vat_recognized: boolean } | null
   receipts: Receipt[]
   expense_installments: Installment[]
+  expense_category_splits: { id: string; category_id: string | null; amount: number; expense_categories: { name: string; is_vat_recognized: boolean } | null }[]
 }
 
 type InstallmentEditTarget = {
@@ -115,8 +116,21 @@ export default function ExpensesTable({ expenses, filterMonth, isMonthClosed, on
     {
       key: 'category',
       header: 'קטגוריה',
-      sortValue: r => r.expense_categories?.name ?? '',
-      cell: r => <span className="text-muted-foreground">{r.expense_categories?.name ?? '—'}</span>,
+      sortValue: r => r.expense_category_splits.length > 0 ? '__split__' : (r.expense_categories?.name ?? ''),
+      cell: r => {
+        if (r.expense_category_splits.length > 0) {
+          return (
+            <div className="flex flex-wrap gap-1">
+              {r.expense_category_splits.map(s => (
+                <span key={s.id} className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800 px-1.5 py-0.5 rounded">
+                  {s.expense_categories?.name ?? 'ללא קטגוריה'}
+                </span>
+              ))}
+            </div>
+          )
+        }
+        return <span className="text-muted-foreground">{r.expense_categories?.name ?? '—'}</span>
+      },
     },
     {
       key: '_installmentAmt',

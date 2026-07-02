@@ -35,7 +35,8 @@ export default async function ExpensesPage() {
         is_recurring, installments_total, is_personal, notes,
         expense_categories(id, name, is_vat_recognized),
         receipts(id, cloudinary_url, file_type, cleaned_up_at, installment_id),
-        expense_installments(id, installment_number, due_month, amount, vat_amount)
+        expense_installments(id, installment_number, due_month, amount, vat_amount),
+        expense_category_splits(id, category_id, amount, expense_categories(name, is_vat_recognized))
       `)
       .eq('user_id', user.id)
       .order('transaction_date', { ascending: false }),
@@ -43,7 +44,7 @@ export default async function ExpensesPage() {
       .from('expense_installments')
       .select(`
         id, installment_number, due_month, amount, vat_amount,
-        expenses!inner(is_personal, expense_categories(name, is_vat_recognized))
+        expenses!inner(is_personal, expense_categories(name, is_vat_recognized), expense_category_splits(category_id, amount, expense_categories(name)))
       `)
       .eq('user_id', user.id),
     supabase

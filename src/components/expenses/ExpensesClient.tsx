@@ -45,6 +45,7 @@ type Installment = {
   expenses: {
     is_personal: boolean
     expense_categories: { name: string; is_vat_recognized: boolean } | null
+    expense_category_splits: { category_id: string | null; amount: number; expense_categories: { name: string } | null }[]
   } | null
 }
 
@@ -61,6 +62,7 @@ type Expense = {
   expense_categories: { id: string; name: string; is_vat_recognized: boolean } | null
   receipts: Receipt[]
   expense_installments: { id: string; installment_number: number; due_month: string; amount: number; vat_amount: number }[]
+  expense_category_splits: { id: string; category_id: string | null; amount: number; expense_categories: { name: string; is_vat_recognized: boolean } | null }[]
 }
 
 type Props = {

@@ -3,6 +3,8 @@
 import { useRef, useState, useTransition } from 'react'
 import { createExpense, updateExpense } from '@/app/(dashboard)/expenses/actions'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
+import { formatILS } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { DatePicker } from '@/components/ui/date-picker'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { UploadCloud, FileText, X, ExternalLink } from 'lucide-react'
+import { UploadCloud, FileText, X, ExternalLink, Plus } from 'lucide-react'
 
 type Category = {
   id: string
@@ -26,6 +28,12 @@ type Receipt = {
   cleaned_up_at: string | null
 }
 
+type SplitData = {
+  id: string
+  category_id: string | null
+  amount: number
+}
+
 type Expense = {
   id: string
   description: string
@@ -37,7 +45,10 @@ type Expense = {
   is_personal: boolean
   notes: string | null
   receipts: Receipt[]
+  expense_category_splits: SplitData[]
 }
+
+type SplitRow = { key: string; category_id: string; amount: string }
 
 type Props = {
   categories: Category[]
@@ -54,8 +65,44 @@ export default function ExpenseModal({ categories, expense, closedMonths, onClos
   const [transactionDate, setTransactionDate] = useState(expense?.transaction_date ?? new Date().toISOString().slice(0, 10))
   const [categoryId, setCategoryId] = useState<string>(expense?.category_id ?? 'none')
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [totalAmount, setTotalAmount] = useState(expense?.total_amount ?? 0)
+
+  const existingSplits = expense?.expense_category_splits ?? []
+  const [isSplit, setIsSplit] = useState(() => existingSplits.length > 0)
+  const [splits, setSplits] = useState<SplitRow[]>(() =>
+    existingSplits.length > 0
+      ? existingSplits.map(s => ({ key: crypto.randomUUID(), category_id: s.category_id ?? 'none', amount: String(s.amount) }))
+      : [{ key: crypto.randomUUID(), category_id: 'none', amount: '' }]
+  )
+
   const fileInputRef = useRef<HTMLInputElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
+
+  const splitTotal = splits.reduce((s, sp) => s + (parseFloat(sp.amount) || 0), 0)
+  const splitRemaining = totalAmount - splitTotal
+  const splitBalanced = Math.abs(splitRemaining) < 0.01
+
+  function addSplit() {
+    setSplits(prev => [...prev, { key: crypto.randomUUID(), category_id: 'none', amount: '' }])
+  }
+
+  function removeSplit(index: number) {
+    setSplits(prev => prev.filter((_, i) => i !== index))
+  }
+
+  function updateSplitField(index: number, field: 'category_id' | 'amount', value: string) {
+    setSplits(prev => prev.map((s, i) => i === index ? { ...s, [field]: value } : s))
+  }
+
+  function toggleSplit(on: boolean) {
+    setIsSplit(on)
+    if (on) setHasInstallments(false)
+  }
+
+  function toggleInstallments(on: boolean) {
+    setHasInstallments(on)
+    if (on) setIsSplit(false)
+  }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     setSelectedFiles(Array.from(e.target.files ?? []))
@@ -79,9 +126,34 @@ export default function ExpenseModal({ categories, expense, closedMonths, onClos
       toast.error(msg)
       return
     }
+    if (isSplit && !splitBalanced) {
+      const msg = `סכום הפיצולים (${formatILS(splitTotal)}) חייב להיות שווה לסכום הכולל (${formatILS(totalAmount)})`
+      setError(msg)
+      toast.error(msg)
+      return
+    }
+    if (isSplit && splits.length < 2) {
+      const msg = 'פיצול לקטגוריות דורש לפחות שתי שורות'
+      setError(msg)
+      toast.error(msg)
+      return
+    }
+
     const formData = new FormData(formRef.current!)
-    formData.set('has_installments', hasInstallments ? 'true' : 'false')
-    if (!hasInstallments) formData.set('installments_total', '1')
+    formData.set('has_installments', hasInstallments && !isSplit ? 'true' : 'false')
+    if (!hasInstallments || isSplit) formData.set('installments_total', '1')
+
+    if (isSplit) {
+      formData.set('splits', JSON.stringify(
+        splits.map(s => ({
+          category_id: s.category_id === 'none' ? null : s.category_id,
+          amount: parseFloat(s.amount) || 0,
+        }))
+      ))
+    } else {
+      formData.set('splits', '')
+    }
+
     startTransition(async () => {
       const action = expense ? updateExpense : createExpense
       const result = await action(null, formData)
@@ -104,6 +176,8 @@ export default function ExpenseModal({ categories, expense, closedMonths, onClos
 
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
           {expense && <input type="hidden" name="expense_id" value={expense.id} />}
+          {/* category_id is empty when split mode is active */}
+          <input type="hidden" name="category_id" value={isSplit ? '' : (categoryId === 'none' ? '' : categoryId)} />
 
           {error && <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2">{error}</p>}
 
@@ -112,39 +186,50 @@ export default function ExpenseModal({ categories, expense, closedMonths, onClos
             <Input name="description" defaultValue={expense?.description} required />
           </div>
 
-          <div className="space-y-1.5">
-            <Label>קטגוריה</Label>
-            <div className="flex gap-2">
-              <input type="hidden" name="category_id" value={categoryId === 'none' ? '' : categoryId} />
-              <Select value={categoryId} onValueChange={setCategoryId}>
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="ללא קטגוריה" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">ללא קטגוריה</SelectItem>
-                  {categories.map(cat => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      <span className="flex items-center gap-2">
-                        {cat.name}
-                        {cat.is_vat_recognized && (
-                          <span className="text-[10px] bg-green-500/15 text-green-700 dark:text-green-400 border border-green-500/30 rounded px-1 py-0.5">מוכר מע&quot;מ</span>
-                        )}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button type="button" variant="outline" size="sm" onClick={onCategoryModalOpen} className="shrink-0">
-                נהל
-              </Button>
+          {/* Category — single or split */}
+          {!isSplit && (
+            <div className="space-y-1.5">
+              <Label>קטגוריה</Label>
+              <div className="flex gap-2">
+                <Select value={categoryId} onValueChange={setCategoryId}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="ללא קטגוריה" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">ללא קטגוריה</SelectItem>
+                    {categories.map(cat => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        <span className="flex items-center gap-2">
+                          {cat.name}
+                          {cat.is_vat_recognized && (
+                            <span className="text-[10px] bg-green-500/15 text-green-700 dark:text-green-400 border border-green-500/30 rounded px-1 py-0.5">מוכר מע&quot;מ</span>
+                          )}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button type="button" variant="outline" size="sm" onClick={onCategoryModalOpen} className="shrink-0">
+                  נהל
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>סכום כולל מע&quot;מ *</Label>
               <div className="relative">
-                <Input name="total_amount" type="number" step="0.01" min="0" defaultValue={expense?.total_amount} required className="pl-8" />
+                <Input
+                  name="total_amount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  defaultValue={expense?.total_amount}
+                  required
+                  className="pl-8"
+                  onChange={e => setTotalAmount(parseFloat(e.target.value) || 0)}
+                />
                 <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">₪</span>
               </div>
             </div>
@@ -160,16 +245,18 @@ export default function ExpenseModal({ categories, expense, closedMonths, onClos
               <Label htmlFor="is_recurring" className="font-normal cursor-pointer">הוצאה קבועה (חוזרת כל חודש)</Label>
             </div>
 
+            {/* Installments */}
             <div className="flex items-center gap-2">
               <Checkbox
                 id="has_installments"
                 checked={hasInstallments}
-                onCheckedChange={v => setHasInstallments(!!v)}
+                disabled={isSplit}
+                onCheckedChange={v => toggleInstallments(!!v)}
               />
-              <Label htmlFor="has_installments" className="font-normal cursor-pointer">תשלומים</Label>
+              <Label htmlFor="has_installments" className={cn('font-normal cursor-pointer', isSplit && 'opacity-40 cursor-not-allowed')}>תשלומים</Label>
             </div>
 
-            {hasInstallments && (
+            {hasInstallments && !isSplit && (
               <div className="mr-6 space-y-1">
                 <Label className="text-xs text-muted-foreground">מספר תשלומים</Label>
                 <Input
@@ -180,6 +267,77 @@ export default function ExpenseModal({ categories, expense, closedMonths, onClos
                   defaultValue={expense && expense.installments_total > 1 ? expense.installments_total : 2}
                   className="w-24"
                 />
+              </div>
+            )}
+
+            {/* Split toggle */}
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="is_split"
+                checked={isSplit}
+                disabled={hasInstallments}
+                onCheckedChange={v => toggleSplit(!!v)}
+              />
+              <Label htmlFor="is_split" className={cn('font-normal cursor-pointer', hasInstallments && 'opacity-40 cursor-not-allowed')}>פיצול לקטגוריות</Label>
+            </div>
+
+            {/* Split rows */}
+            {isSplit && (
+              <div className="mr-6 space-y-2.5">
+                {splits.map((split, index) => (
+                  <div key={split.key} className="flex gap-2 items-center">
+                    <Select value={split.category_id} onValueChange={v => updateSplitField(index, 'category_id', v)}>
+                      <SelectTrigger className="flex-1 min-w-0">
+                        <SelectValue placeholder="ללא קטגוריה" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">ללא קטגוריה</SelectItem>
+                        {categories.map(cat => (
+                          <SelectItem key={cat.id} value={cat.id}>
+                            <span className="flex items-center gap-2">
+                              {cat.name}
+                              {cat.is_vat_recognized && (
+                                <span className="text-[10px] bg-green-500/15 text-green-700 dark:text-green-400 border border-green-500/30 rounded px-1 py-0.5">מוכר</span>
+                              )}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="relative w-28 shrink-0">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        value={split.amount}
+                        onChange={e => updateSplitField(index, 'amount', e.target.value)}
+                        className="pl-7 text-sm"
+                      />
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">₪</span>
+                    </div>
+                    {splits.length > 1 && (
+                      <button type="button" onClick={() => removeSplit(index)} className="shrink-0 text-muted-foreground hover:text-destructive transition-colors">
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+
+                <div className="flex items-center justify-between">
+                  <button type="button" onClick={addSplit}
+                    className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors">
+                    <Plus className="h-3 w-3" />
+                    הוסף פיצול
+                  </button>
+                  <span className={cn('text-xs tabular-nums', splitBalanced ? 'text-green-600 dark:text-green-400' : 'text-destructive')}>
+                    {splitBalanced
+                      ? '✓ מאוזן'
+                      : splitRemaining > 0
+                        ? `נותר: ${formatILS(splitRemaining)}`
+                        : `חריגה: ${formatILS(-splitRemaining)}`}
+                  </span>
+                </div>
               </div>
             )}
 

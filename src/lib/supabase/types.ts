@@ -144,6 +144,30 @@ export type Database = {
         }
         Relationships: []
       }
+      expense_category_splits: {
+        Row: {
+          id: string
+          expense_id: string
+          user_id: string
+          category_id: string | null
+          amount: number
+        }
+        Insert: {
+          id?: string
+          expense_id: string
+          user_id: string
+          category_id?: string | null
+          amount: number
+        }
+        Update: {
+          id?: string
+          expense_id?: string
+          user_id?: string
+          category_id?: string | null
+          amount?: number
+        }
+        Relationships: []
+      }
       expense_categories: {
         Row: {
           id: string

@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
-import { installmentVat } from '@/lib/vat'
+import { installmentVat, extractVat } from '@/lib/vat'
 import { uploadFile, deleteFile } from '@/lib/cloudinary'
 
 // ─── Categories ───────────────────────────────────────────────────────────────
@@ -54,14 +54,13 @@ export async function deleteCategory(categoryId: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'לא מחובר' }
 
-  // Check if any expense uses this category
-  const { count } = await supabase
-    .from('expenses')
-    .select('id', { count: 'exact', head: true })
-    .eq('category_id', categoryId)
-    .eq('user_id', user.id)
+  // Check if any expense (direct or via split) uses this category
+  const [{ count }, { count: splitCount }] = await Promise.all([
+    supabase.from('expenses').select('id', { count: 'exact', head: true }).eq('category_id', categoryId).eq('user_id', user.id),
+    supabase.from('expense_category_splits').select('id', { count: 'exact', head: true }).eq('category_id', categoryId).eq('user_id', user.id),
+  ])
 
-  if (count && count > 0) return { error: 'לא ניתן למחוק קטגוריה בשימוש' }
+  if ((count && count > 0) || (splitCount && splitCount > 0)) return { error: 'לא ניתן למחוק קטגוריה בשימוש' }
 
   const { error } = await supabase
     .from('expense_categories')
@@ -92,7 +91,6 @@ export async function createExpense(_prev: unknown, formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'לא מחובר' }
 
-  // Fetch VAT rate from settings
   const { data: settings } = await supabase
     .from('settings')
     .select('vat_rate')
@@ -113,14 +111,41 @@ export async function createExpense(_prev: unknown, formData: FormData) {
   })
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
-  const numInstallments = parsed.data.has_installments ? parsed.data.installments_total : 1
+  // Parse category splits (mutually exclusive with installments)
+  const splitsRaw: { category_id: string | null; amount: number }[] = (() => {
+    const raw = formData.get('splits') as string
+    if (!raw) return []
+    try { return JSON.parse(raw) } catch { return [] }
+  })()
+  const hasSplits = splitsRaw.length > 0
 
-  // Insert expense
+  if (hasSplits) {
+    const splitsTotal = splitsRaw.reduce((s, sp) => s + sp.amount, 0)
+    if (Math.abs(splitsTotal - parsed.data.total_amount) > 0.01)
+      return { error: 'סכום הפיצולים חייב להיות שווה לסכום הכולל' }
+  }
+
+  // Splits are mutually exclusive with installments
+  const numInstallments = hasSplits ? 1 : (parsed.data.has_installments ? parsed.data.installments_total : 1)
+
+  // Pre-calculate VAT for split expenses (per recognized category)
+  let splitVatAmount = 0
+  if (hasSplits) {
+    const catIds = splitsRaw.map(s => s.category_id).filter(Boolean) as string[]
+    const { data: cats } = catIds.length > 0
+      ? await supabase.from('expense_categories').select('id, is_vat_recognized').in('id', catIds)
+      : { data: [] }
+    splitVatAmount = splitsRaw.reduce((sum, s) => {
+      const cat = (cats ?? []).find(c => c.id === s.category_id)
+      return sum + (cat?.is_vat_recognized ? extractVat(s.amount, vatRate) : 0)
+    }, 0)
+  }
+
   const { data: expense, error: expenseError } = await supabase
     .from('expenses')
     .insert({
       user_id: user.id,
-      category_id: parsed.data.category_id ?? null,
+      category_id: hasSplits ? null : (parsed.data.category_id ?? null),
       description: parsed.data.description,
       total_amount: parsed.data.total_amount,
       transaction_date: parsed.data.transaction_date,
@@ -148,7 +173,7 @@ export async function createExpense(_prev: unknown, formData: FormData) {
       installment_number: i + 1,
       due_month: dueDate.toISOString().slice(0, 10),
       amount: installmentAmount,
-      vat_amount: installmentVat(parsed.data.total_amount, i + 1, vatRate),
+      vat_amount: hasSplits ? splitVatAmount : installmentVat(parsed.data.total_amount, i + 1, vatRate),
     }
   })
 
@@ -158,6 +183,18 @@ export async function createExpense(_prev: unknown, formData: FormData) {
     .select('id, installment_number')
   if (installmentError) return { error: installmentError.message }
 
+  // Insert category splits
+  if (hasSplits) {
+    await supabase.from('expense_category_splits').insert(
+      splitsRaw.map(s => ({
+        expense_id: expense.id,
+        user_id: user.id,
+        category_id: s.category_id ?? null,
+        amount: s.amount,
+      }))
+    )
+  }
+
   // For recurring expenses, receipts are linked to the specific installment so each month
   // can have its own receipt. For non-recurring, installment_id is null (receipt belongs to
   // the expense across all installment payments).
@@ -165,7 +202,6 @@ export async function createExpense(_prev: unknown, formData: FormData) {
     ? (insertedInstallments?.find(i => i.installment_number === 1)?.id ?? null)
     : null
 
-  // Handle receipt uploads
   const files = formData.getAll('receipts') as File[]
   for (const file of files) {
     if (file.size === 0) continue
@@ -214,12 +250,37 @@ export async function updateExpense(_prev: unknown, formData: FormData) {
   })
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
-  const numInstallments = parsed.data.has_installments ? parsed.data.installments_total : 1
+  const splitsRaw: { category_id: string | null; amount: number }[] = (() => {
+    const raw = formData.get('splits') as string
+    if (!raw) return []
+    try { return JSON.parse(raw) } catch { return [] }
+  })()
+  const hasSplits = splitsRaw.length > 0
+
+  if (hasSplits) {
+    const splitsTotal = splitsRaw.reduce((s, sp) => s + sp.amount, 0)
+    if (Math.abs(splitsTotal - parsed.data.total_amount) > 0.01)
+      return { error: 'סכום הפיצולים חייב להיות שווה לסכום הכולל' }
+  }
+
+  const numInstallments = hasSplits ? 1 : (parsed.data.has_installments ? parsed.data.installments_total : 1)
+
+  let splitVatAmount = 0
+  if (hasSplits) {
+    const catIds = splitsRaw.map(s => s.category_id).filter(Boolean) as string[]
+    const { data: cats } = catIds.length > 0
+      ? await supabase.from('expense_categories').select('id, is_vat_recognized').in('id', catIds)
+      : { data: [] }
+    splitVatAmount = splitsRaw.reduce((sum, s) => {
+      const cat = (cats ?? []).find(c => c.id === s.category_id)
+      return sum + (cat?.is_vat_recognized ? extractVat(s.amount, vatRate) : 0)
+    }, 0)
+  }
 
   const { error: updateError } = await supabase
     .from('expenses')
     .update({
-      category_id: parsed.data.category_id ?? null,
+      category_id: hasSplits ? null : (parsed.data.category_id ?? null),
       description: parsed.data.description,
       total_amount: parsed.data.total_amount,
       transaction_date: parsed.data.transaction_date,
@@ -232,6 +293,19 @@ export async function updateExpense(_prev: unknown, formData: FormData) {
     .eq('user_id', user.id)
 
   if (updateError) return { error: updateError.message }
+
+  // Always replace splits (delete + re-insert)
+  await supabase.from('expense_category_splits').delete().eq('expense_id', expenseId).eq('user_id', user.id)
+  if (hasSplits) {
+    await supabase.from('expense_category_splits').insert(
+      splitsRaw.map(s => ({
+        expense_id: expenseId,
+        user_id: user.id,
+        category_id: s.category_id ?? null,
+        amount: s.amount,
+      }))
+    )
+  }
 
   // Only rebuild installments for non-recurring expenses. Recurring expenses accumulate
   // one installment per month via ensureRecurringInstallments — wiping them here would
@@ -250,13 +324,12 @@ export async function updateExpense(_prev: unknown, formData: FormData) {
         installment_number: i + 1,
         due_month: dueDate.toISOString().slice(0, 10),
         amount: installmentAmount,
-        vat_amount: installmentVat(parsed.data.total_amount, i + 1, vatRate),
+        vat_amount: hasSplits ? splitVatAmount : installmentVat(parsed.data.total_amount, i + 1, vatRate),
       }
     })
     await supabase.from('expense_installments').insert(installments)
   }
 
-  // Handle new receipt uploads
   const files = formData.getAll('receipts') as File[]
   for (const file of files) {
     if (file.size === 0) continue
@@ -385,13 +458,21 @@ export async function ensureRecurringInstallments() {
 
   const { data: recurring } = await supabase
     .from('expenses')
-    .select('id, total_amount')
+    .select(`
+      id, total_amount,
+      expense_category_splits(category_id, amount, expense_categories(is_vat_recognized))
+    `)
     .eq('user_id', user.id)
     .eq('is_recurring', true)
 
   if (!recurring) return
 
-  for (const expense of recurring) {
+  type RecurringSplit = { category_id: string | null; amount: number; expense_categories: { is_vat_recognized: boolean } | null }
+  type RecurringExpense = { id: string; total_amount: number; expense_category_splits: RecurringSplit[] }
+
+  for (const _expense of recurring) {
+    const expense = _expense as unknown as RecurringExpense
+
     const { count } = await supabase
       .from('expense_installments')
       .select('id', { count: 'exact', head: true })
@@ -408,13 +489,20 @@ export async function ensureRecurringInstallments() {
         .single()
 
       const nextNumber = (lastInstallment?.installment_number ?? 0) + 1
+
+      // For split expenses compute VAT per recognized split; otherwise use standard rule
+      const splits = expense.expense_category_splits ?? []
+      const vatAmount = splits.length > 0
+        ? splits.reduce((sum, s) => sum + (s.expense_categories?.is_vat_recognized ? extractVat(s.amount, vatRate) : 0), 0)
+        : installmentVat(expense.total_amount, nextNumber, vatRate)
+
       await supabase.from('expense_installments').insert({
         expense_id: expense.id,
         user_id: user.id,
         installment_number: nextNumber,
         due_month: currentMonth,
         amount: expense.total_amount,
-        vat_amount: installmentVat(expense.total_amount, nextNumber, vatRate),
+        vat_amount: vatAmount,
       })
     }
   }
