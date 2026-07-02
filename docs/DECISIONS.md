@@ -1,3 +1,20 @@
+## [2026-07-02] Open question: expense amount input — VAT-inclusive vs. VAT-exclusive
+Context: The expense modal currently asks for "סכום כולל מע"מ" (VAT-inclusive). The question is whether to let users enter the ex-VAT amount instead, since that's often what appears on the invoice line before tax.
+
+### Option A — Convert at input only (recommended)
+User enters ex-VAT amount. Server multiplies by `(1 + vatRate/100)` before storing, so `total_amount` in the DB stays VAT-inclusive as today.
+- Touch points: modal label, optional live "= ₪X כולל מע"מ" preview, one line in `createExpense`/`updateExpense`.
+- Zero changes to installments, summary cards, dashboard, charts, email, or splits.
+- Difficulty: trivial (~20 min).
+
+### Option B — Change storage to ex-VAT
+`total_amount`, `expense_installments.amount`, and `expense_category_splits.amount` all become ex-VAT in the DB.
+- Ripples across: summary cards formula, dashboard cash flow, charts, email, `lib/vat.ts` (need add-VAT variants), and a data migration on existing rows.
+- Splits become conceptually awkward for non-recognized categories (VAT is embedded in the receipt price even when non-deductible).
+- Difficulty: significant (~8 files + migration).
+
+Decision: not yet made — review before implementing.
+
 ## [2026-06-08] Decision: income.delivery_amount replaces payment_on_delivery boolean
 Context: The income form had a boolean "תשלום במסירה" checkbox that didn't capture how much of the price is a delivery fee vs. product revenue.
 Decision: Replace `payment_on_delivery boolean` with `delivery_amount numeric(12,2) DEFAULT 0`. Zero means no delivery; any positive value is the delivery portion of `final_price`.
