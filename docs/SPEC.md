@@ -279,7 +279,7 @@ CREATE TABLE expenses (
   user_id           uuid    REFERENCES auth.users NOT NULL,
   category_id       uuid    REFERENCES expense_categories,
   description       text    NOT NULL,
-  total_amount      numeric(12,2) NOT NULL,   -- full amount, VAT inclusive
+  total_amount      numeric(12,2) NOT NULL,   -- full amount, EX-VAT (VAT stored separately on installments)
   transaction_date  date    NOT NULL,
   is_recurring      boolean DEFAULT false,    -- auto-copies each month
   installments_total int    DEFAULT 1,
@@ -304,9 +304,13 @@ CREATE TABLE expense_installments (
 ```
 
 **VAT rule on installments:**
-VAT is calculated on installment #1 only, using the full `total_amount`.
+`amount` and `total_amount` are stored EX-VAT.
+For installment plans (one purchase split into N payments): VAT is calculated
+on installment #1 only, using the full ex-VAT `total_amount`.
 All other installments: `vat_amount = 0`.
-Formula: `vat_amount = total_amount * vat_rate / (100 + vat_rate)`
+Formula: `vat_amount = total_amount * vat_rate / 100`
+Recurring expenses are different: each auto-created month gets its own
+`vat_amount` (each month has its own invoice).
 
 **Recurring expenses logic:**
 On page load, check if any `is_recurring = true` expense is missing an
@@ -437,40 +441,52 @@ CREATE POLICY "<table_name>_owner" ON <table_name>
 
 This is the only file that may perform VAT calculations.
 
+Expense amounts are stored EX-VAT; income (`final_price`) is stored
+VAT-inclusive.
+
 ```typescript
 /**
- * Extract VAT from a VAT-inclusive amount.
- * amount  = total amount (VAT included)
+ * VAT on an ex-VAT amount (expenses).
  * vatRate = e.g. 18 (not 0.18)
+ */
+export function vatOnExAmount(exAmount: number, vatRate: number): number {
+  return (exAmount * vatRate) / 100;
+}
+
+/**
+ * VAT-inclusive total for an ex-VAT amount (display).
+ */
+export function amountWithVat(exAmount: number, vatRate: number): number {
+  return exAmount * (1 + vatRate / 100);
+}
+
+/**
+ * Extract VAT from a VAT-inclusive amount (income).
  */
 export function extractVat(amount: number, vatRate: number): number {
   return (amount * vatRate) / (100 + vatRate);
 }
 
 /**
- * Amount excluding VAT.
- */
-export function amountWithoutVat(amount: number, vatRate: number): number {
-  return amount - extractVat(amount, vatRate);
-}
-
-/**
- * VAT for installment payments.
- * Rule: VAT is charged on the FULL total_amount, but only on installment #1.
+ * VAT for installment payments (one purchase split into N payments).
+ * Rule: VAT is charged on the FULL ex-VAT total, but only on installment #1.
  * All other installments: vat_amount = 0.
  *
- * Example: 1,000 ILS in 4 installments, VAT = 18%
- *   Installment 1 (June):  amount=250, vat_amount=extractVat(1000, 18)=152.54
+ * Example: 1,000 ILS (ex-VAT) in 4 installments, VAT = 18%
+ *   Installment 1 (June):  amount=250, vat_amount=vatOnExAmount(1000, 18)=180
  *   Installment 2 (July):  amount=250, vat_amount=0
  *   Installment 3 (Aug):   amount=250, vat_amount=0
  *   Installment 4 (Sep):   amount=250, vat_amount=0
+ *
+ * Recurring expenses do NOT use this rule — each auto-created month gets
+ * vatOnExAmount(total_amount) since each month has its own invoice.
  */
 export function installmentVat(
-  totalAmount: number,
+  totalExAmount: number,
   installmentNumber: number,
   vatRate: number
 ): number {
-  return installmentNumber === 1 ? extractVat(totalAmount, vatRate) : 0;
+  return installmentNumber === 1 ? vatOnExAmount(totalExAmount, vatRate) : 0;
 }
 ```
 
@@ -514,7 +530,7 @@ Columns: תאריך | תיאור | קטגוריה | סכום | מע"מ | תשל�
 Fields:
 - תיאור (required, text)
 - קטגוריה (dropdown; includes "+ הוסף קטגוריה" inline option)
-- סכום כולל מע"מ in ILS (required, number)
+- סכום ללא מע"מ in ILS (required, number)
 - תאריך עסקה (date picker, required)
 - הוצאה קבועה — checkbox
   - If checked: this expense auto-generates a copy every month.

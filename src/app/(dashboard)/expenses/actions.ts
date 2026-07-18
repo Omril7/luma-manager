@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
-import { installmentVat, extractVat } from '@/lib/vat'
+import { installmentVat, vatOnExAmount } from '@/lib/vat'
 import { uploadFile, deleteFile } from '@/lib/cloudinary'
 
 // ─── Categories ───────────────────────────────────────────────────────────────
@@ -137,7 +137,7 @@ export async function createExpense(_prev: unknown, formData: FormData) {
       : { data: [] }
     splitVatAmount = splitsRaw.reduce((sum, s) => {
       const cat = (cats ?? []).find(c => c.id === s.category_id)
-      return sum + (cat?.is_vat_recognized ? extractVat(s.amount, vatRate) : 0)
+      return sum + (cat?.is_vat_recognized ? vatOnExAmount(s.amount, vatRate) : 0)
     }, 0)
   }
 
@@ -273,7 +273,7 @@ export async function updateExpense(_prev: unknown, formData: FormData) {
       : { data: [] }
     splitVatAmount = splitsRaw.reduce((sum, s) => {
       const cat = (cats ?? []).find(c => c.id === s.category_id)
-      return sum + (cat?.is_vat_recognized ? extractVat(s.amount, vatRate) : 0)
+      return sum + (cat?.is_vat_recognized ? vatOnExAmount(s.amount, vatRate) : 0)
     }, 0)
   }
 
@@ -406,15 +406,28 @@ export async function updateInstallment(_prev: unknown, formData: FormData) {
   // Fetch installment to get the parent expense_id (needed for the receipts insert)
   const { data: installment } = await supabase
     .from('expense_installments')
-    .select('expense_id')
+    .select('expense_id, vat_amount, expenses!inner(is_recurring)')
     .eq('id', installmentId)
     .eq('user_id', user.id)
     .single()
   if (!installment) return { error: 'תשלום לא נמצא' }
 
+  // A recurring month's VAT is derived from its own amount, so recompute it when
+  // the amount changes. Rows with vat_amount = 0 (pre-monthly-VAT history) stay 0.
+  const isRecurring = (installment as unknown as { expenses: { is_recurring: boolean } }).expenses.is_recurring
+  let newVat: number | undefined
+  if (isRecurring && installment.vat_amount > 0) {
+    const { data: settings } = await supabase
+      .from('settings')
+      .select('vat_rate')
+      .eq('user_id', user.id)
+      .single()
+    newVat = vatOnExAmount(amount, settings?.vat_rate ?? 18)
+  }
+
   const { error: updateError } = await supabase
     .from('expense_installments')
-    .update({ amount })
+    .update(newVat !== undefined ? { amount, vat_amount: newVat } : { amount })
     .eq('id', installmentId)
     .eq('user_id', user.id)
   if (updateError) return { error: updateError.message }
@@ -490,11 +503,12 @@ export async function ensureRecurringInstallments() {
 
       const nextNumber = (lastInstallment?.installment_number ?? 0) + 1
 
-      // For split expenses compute VAT per recognized split; otherwise use standard rule
+      // Each recurring month has its own invoice, so VAT applies every month
+      // (not only the first) — per recognized split, or on the full amount.
       const splits = expense.expense_category_splits ?? []
       const vatAmount = splits.length > 0
-        ? splits.reduce((sum, s) => sum + (s.expense_categories?.is_vat_recognized ? extractVat(s.amount, vatRate) : 0), 0)
-        : installmentVat(expense.total_amount, nextNumber, vatRate)
+        ? splits.reduce((sum, s) => sum + (s.expense_categories?.is_vat_recognized ? vatOnExAmount(s.amount, vatRate) : 0), 0)
+        : vatOnExAmount(expense.total_amount, vatRate)
 
       await supabase.from('expense_installments').insert({
         expense_id: expense.id,

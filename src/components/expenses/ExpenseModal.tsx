@@ -218,7 +218,7 @@ export default function ExpenseModal({ categories, expense, closedMonths, onClos
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>סכום כולל מע&quot;מ *</Label>
+              <Label>סכום ללא מע&quot;מ *</Label>
               <div className="relative">
                 <Input
                   name="total_amount"

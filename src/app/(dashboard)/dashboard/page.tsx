@@ -41,7 +41,7 @@ export default async function DashboardPage() {
     // all installments for running balance
     supabase
       .from('expense_installments')
-      .select('amount, due_month, expenses!inner(is_personal, user_id)')
+      .select('amount, vat_amount, due_month, expenses!inner(is_personal, user_id)')
       .eq('expenses.user_id', user.id)
       .eq('expenses.is_personal', false),
     // all income for running balance
@@ -86,10 +86,13 @@ export default async function DashboardPage() {
     hoursForMonth.set(ym, (hoursForMonth.get(ym) ?? 0) + ((r as { work_hours?: number }).work_hours ?? 0))
   }
 
+  // Cash flow counts gross (ex-VAT amount + VAT) — the VAT paid to suppliers is
+  // real cash out; authority_payments 'vat' is only the net remittance.
   const expensesByMonth = new Map<string, number>()
   for (const r of allInstallments ?? []) {
     const ym = toYM((r as { due_month: string }).due_month)
-    expensesByMonth.set(ym, (expensesByMonth.get(ym) ?? 0) + (r as { amount: number }).amount)
+    const row = r as { amount: number; vat_amount: number }
+    expensesByMonth.set(ym, (expensesByMonth.get(ym) ?? 0) + row.amount + row.vat_amount)
   }
 
   type AuthorityBreakdown = { income_tax: number; social_security: number; vat: number }

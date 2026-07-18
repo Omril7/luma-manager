@@ -1,3 +1,12 @@
+## [2026-07-15] Decision: expense storage switched to ex-VAT (Option B implemented)
+Context: Resolves the 2026-07-02 open question below. Plan lived in docs/VAT.md.
+Decision: `expenses.total_amount`, `expense_installments.amount`, and `expense_category_splits.amount` are now stored EX-VAT; `vat_amount` is unchanged in meaning; `income.final_price` stays VAT-inclusive. Backfill migration `20260715000000_ex_vat_storage.sql` derives ex-VAT values from each row's stored `vat_amount` (rate-independent), handles recurring expenses per-month (not sum-of-installments), and converts only VAT-recognized splits (non-deductible VAT stays embedded as cost).
+Sub-decisions made with the user:
+- Dashboard cash flow counts expenses GROSS (`amount + vat_amount`) — VAT paid to suppliers is real cash out; `authority_payments` type 'vat' is only the net remittance, so no double counting.
+- Expenses-page charts show EX-VAT (true cost; also the only accurate option per-category for split expenses, since VAT isn't stored per split).
+- Recurring expenses now get `vat_amount` EVERY auto-created month (each month has its own invoice); previously only month #1 got VAT. Historical rows untouched so past VAT reports don't change. `updateInstallment` recomputes `vat_amount` when a recurring month's amount is corrected (only for rows that already carried VAT).
+Reason: Ex-VAT is what appears on invoice lines and what the accountant works with; installment/recurring VAT math becomes add-on-top instead of extraction.
+
 ## [2026-07-02] Open question: expense amount input — VAT-inclusive vs. VAT-exclusive
 Context: The expense modal currently asks for "סכום כולל מע"מ" (VAT-inclusive). The question is whether to let users enter the ex-VAT amount instead, since that's often what appears on the invoice line before tax.
 
@@ -13,7 +22,7 @@ User enters ex-VAT amount. Server multiplies by `(1 + vatRate/100)` before stori
 - Splits become conceptually awkward for non-recognized categories (VAT is embedded in the receipt price even when non-deductible).
 - Difficulty: significant (~8 files + migration).
 
-Decision: not yet made — review before implementing.
+Decision: Option B — implemented 2026-07-15, see the entry above.
 
 ## [2026-06-08] Decision: income.delivery_amount replaces payment_on_delivery boolean
 Context: The income form had a boolean "תשלום במסירה" checkbox that didn't capture how much of the price is a delivery fee vs. product revenue.

@@ -1,3 +1,14 @@
+## [2026-07-15] Ex-VAT expense storage (Option B from docs/VAT.md)
+- Expense amounts (`total_amount`, installment `amount`, split `amount`) now stored EX-VAT; income stays VAT-inclusive
+- `lib/vat.ts`: added `vatOnExAmount` + `amountWithVat`; `installmentVat` now adds VAT on top of the ex-VAT total (installment #1 only); removed unused `amountWithoutVat`; kept `extractVat` for income (VAT report)
+- `expenses/actions.ts`: all VAT call sites swapped to `vatOnExAmount`; recurring expenses now get VAT every auto-created month (was: first month only — under-claimed input VAT); `updateInstallment` recomputes VAT when a recurring month's amount is corrected
+- Summary cards: total = amount + VAT (was: net = total − VAT); dashboard cash flow counts gross expenses (amount + vat_amount); expenses charts stay ex-VAT (per-category accuracy for splits)
+- Summary email: business column relabeled "סכום ללא מע"מ"; personal section shows gross (what was actually paid)
+- Modal label: "סכום כולל מע"מ" → "סכום ללא מע"מ"; VAT report expense column relabeled
+- Backfill migration `20260715000000_ex_vat_storage.sql`: single transaction, rate-independent (derived from stored `vat_amount`), recurring handled per-month, only recognized splits converted; spot-check queries included as comments
+- NOT YET APPLIED to the DB — run via Supabase SQL Editor after taking a backup, deployed together with this code
+- Known: historical recurring months 2+ keep their gross amount with vat_amount=0 (data-faithful — every previously displayed/filed number is unchanged); VAT report still excludes split expenses (pre-existing, filters on direct category only)
+
 ## [2026-06-13] Storage page (איחסון)
 - New `/storage` page listing months with receipt counts (active vs archived)
 - Per-month cleanup flow: Step 1 downloads all receipts as ZIP, Step 2 confirms deletion from Cloudinary and marks rows archived

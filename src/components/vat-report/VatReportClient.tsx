@@ -145,7 +145,7 @@ export default function VatReportClient({ vatRate, vatReportFrequency, incomeRow
     },
     {
       key: 'amount',
-      header: 'סכום',
+      header: 'סכום ללא מע"מ',
       cell: r => ils(r.amount),
     },
     {

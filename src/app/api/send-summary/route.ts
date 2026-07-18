@@ -108,7 +108,8 @@ export async function POST(req: NextRequest) {
 
   const totalVatRecognized = vatRecognizedRows.reduce((s, r) => s + r.amount, 0)
   const totalVat = vatRecognizedRows.reduce((s, r) => s + r.vat_amount, 0)
-  const totalPersonal = personalRows.reduce((s, r) => s + r.amount, 0)
+  // Personal expenses are informational — show what was actually paid (gross)
+  const totalPersonal = personalRows.reduce((s, r) => s + r.amount + r.vat_amount, 0)
 
   // Inline style constants — Gmail strips <style> blocks, everything must be inline
   const FONT = 'font-family:Arial,Helvetica,sans-serif;'
@@ -163,7 +164,7 @@ export async function POST(req: NextRequest) {
             <th dir="rtl" style="${TH}">תאריך</th>
             <th dir="rtl" style="${TH}">תיאור</th>
             <th dir="rtl" style="${TH}">קטגוריה</th>
-            <th dir="rtl" style="${TH}">סכום</th>
+            <th dir="rtl" style="${TH}">סכום ללא מע&quot;מ</th>
             <th dir="rtl" style="${TH}">מע&quot;מ</th>
           </tr>
         </thead>
@@ -201,7 +202,7 @@ export async function POST(req: NextRequest) {
           <tr dir="rtl">
             <td dir="rtl" style="${TD}">${new Date(r.expenses.transaction_date).toLocaleDateString('he-IL')}</td>
             <td dir="rtl" style="${TD}">${r.expenses.description}</td>
-            <td dir="rtl" style="${TD_NUM}">${formatILS(r.amount, 2)}</td>
+            <td dir="rtl" style="${TD_NUM}">${formatILS(r.amount + r.vat_amount, 2)}</td>
           </tr>`).join('')}
           <tr dir="rtl">
             <td dir="rtl" colspan="2" style="${TD_FOOT_PERSONAL}">סה&quot;כ</td>
