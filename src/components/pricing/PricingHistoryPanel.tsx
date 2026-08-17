@@ -373,12 +373,12 @@ export default function PricingHistoryPanel({ pricings, defaultHourlyRate, defau
 
       {/* Wizard Modal */}
       <Dialog open={showWizard} onOpenChange={v => { if (!v) setShowWizard(false) }}>
-        <DialogContent className="max-w-lg" dir="rtl">
-          <DialogHeader>
+        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col overflow-hidden" dir="rtl">
+          <DialogHeader className="shrink-0">
             <DialogTitle>{editingId ? 'עריכת תמחור' : 'תמחור חדש'}</DialogTitle>
           </DialogHeader>
 
-          <div className="flex items-start mb-5">
+          <div className="flex items-start mb-5 shrink-0">
             {STEPS.map((s, i) => (
               <Fragment key={s}>
                 <div className="flex flex-col items-center gap-1.5 shrink-0">
@@ -406,16 +406,16 @@ export default function PricingHistoryPanel({ pricings, defaultHourlyRate, defau
             ))}
           </div>
 
-          <div className="min-h-[260px]">
+          <div className="min-h-[260px] flex-1 overflow-y-auto pr-1 -mr-1">
             {step === 0 && <Step1 parts={parts} setParts={setParts} wizardName={wizardName} setWizardName={setWizardName} materialsTotal={materialsTotal} materials={materials} />}
             {step === 1 && <Step2 hourlyRate={hourlyRate} setHourlyRate={setHourlyRate} timeHours={timeHours} setTimeHours={setTimeHours} laborTotal={laborTotal} />}
             {step === 2 && <Step3 overheadPerHour={overheadPerHour} setOverheadPerHour={setOverheadPerHour} timeHours={timeHours} overheadTotal={overheadTotal} />}
             {step === 3 && <Step4 profitType={profitType} setProfitType={setProfitType} profitValue={profitValue} setProfitValue={setProfitValue} costBase={costBase} profitAmount={profitAmount} suggestedPrice={suggestedPrice} materialsTotal={materialsTotal} laborTotal={laborTotal} overheadTotal={overheadTotal} />}
           </div>
 
-          {wizardError && <p className="text-red-500 text-sm">{wizardError}</p>}
+          {wizardError && <p className="text-red-500 text-sm shrink-0">{wizardError}</p>}
 
-          <div className="flex justify-between pt-2">
+          <div className="flex justify-between pt-2 shrink-0">
             <Button variant="outline" onClick={() => { setWizardError(''); if (step === 0) setShowWizard(false); else setStep(s => s - 1) }}>
               {step === 0 ? 'ביטול' : <><ChevronRight className="h-4 w-4 ml-1" />הקודם</>}
             </Button>
