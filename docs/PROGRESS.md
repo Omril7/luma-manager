@@ -1,3 +1,9 @@
+## [2026-09-29] Income & expenses: annual view shows all rows, pagination
+- Annual view: tables and summary cards now cover the whole selected year (were stuck on the selected month). Expenses table renders one row per installment in the period (was one per expense); edit/delete lock per row's own month via `closedMonths`; add button hidden only in monthly view of a closed month
+- `IncomeTable`/`ExpensesTable` take `filterPeriod` (`YYYY` or `YYYY-MM`) + `closedMonths` instead of `filterMonth` + `isMonthClosed`
+- Pagination on both tables (default 25/page) with a rows-per-page select (10/25/50/100) via `DataTable`'s `pagination.pageSizeOptions`; page resets on period change; page containers get bottom padding so the add button doesn't cover the arrows
+- No schema change
+
 ## [2026-09-29] Income: advance payment as a separate record
 - Supersedes the `advance_amount`/`advance_date` columns: an advance is now its own `income` row (`is_advance = true`) dated when received, so charts/totals/cash flow count it in the right month; the remainder is a second row on the sale date
 - `createIncome` inserts both rows in one call; discount, delivery and work hours stay on the remainder row; Zod checks advance ≤ final price and delivery ≤ remainder

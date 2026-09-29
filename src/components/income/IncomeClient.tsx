@@ -55,7 +55,8 @@ export default function IncomeClient({ products, pricings, incomeRows, closedMon
 
   const filterMonth = `${year}-${String(month).padStart(2, '0')}`
   const isMonthClosed = closedMonths.includes(filterMonth)
-  const monthRows = incomeRows.filter(r => r.income_date.slice(0, 7) === filterMonth)
+  const filterPeriod = isAnnual ? String(year) : filterMonth
+  const periodRows = incomeRows.filter(r => r.income_date.startsWith(filterPeriod))
 
   function prevMonth() {
     if (month === 1) { setMonth(12); setYear(y => y - 1) }
@@ -90,8 +91,8 @@ export default function IncomeClient({ products, pricings, incomeRows, closedMon
         </button>
       </div>
 
-      {/* Summary cards (always monthly) */}
-      <IncomeSummaryCards rows={monthRows} />
+      {/* Summary cards (selected month or year) */}
+      <IncomeSummaryCards rows={periodRows} />
 
       {/* Filter bar */}
       <div className="flex items-center gap-3 flex-wrap">
@@ -160,14 +161,14 @@ export default function IncomeClient({ products, pricings, incomeRows, closedMon
         <h2 className="text-base font-semibold text-gray-800 mb-4">רשימת הכנסות</h2>
         <IncomeTable
           rows={incomeRows}
-          filterPeriod={isAnnual ? String(year) : filterMonth}
+          filterPeriod={filterPeriod}
           closedMonths={closedMonths}
           onEdit={openEdit}
         />
       </div>
 
-      {/* FAB — hidden when the viewed month is closed */}
-      {!isMonthClosed && (
+      {/* FAB — hidden when the viewed month is closed (monthly view only) */}
+      {!(isMonthClosed && !isAnnual) && (
         <button
           onClick={openAdd}
           className="fixed bottom-8 left-8 bg-green-600 text-white w-14 h-14 rounded-full shadow-lg text-2xl flex items-center justify-center hover:bg-green-700 transition-colors z-40"

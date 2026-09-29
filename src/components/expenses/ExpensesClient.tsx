@@ -90,8 +90,9 @@ export default function ExpensesClient({ categories, expenses, allInstallments, 
   const filterMonth = `${year}-${String(month).padStart(2, '0')}`
   const isMonthClosed = closedMonths.includes(filterMonth)
 
-  // Installments for the current month (for summary cards)
-  const monthInstallments = allInstallments.filter(i => i.due_month.slice(0, 7) === filterMonth)
+  // Installments for the selected period — month or whole year (for summary cards)
+  const filterPeriod = isAnnual ? String(year) : filterMonth
+  const periodInstallments = allInstallments.filter(i => i.due_month.startsWith(filterPeriod))
 
   function prevMonth() {
     if (month === 1) { setMonth(12); setYear(y => y - 1) }
@@ -135,7 +136,7 @@ export default function ExpensesClient({ categories, expenses, allInstallments, 
       </div>
 
       {/* Summary Cards */}
-      <ExpenseSummaryCards installments={monthInstallments} vatRate={vatRate} />
+      <ExpenseSummaryCards installments={periodInstallments} vatRate={vatRate} />
 
       {/* Filter Bar */}
       <div className="flex items-center gap-3 flex-wrap">
@@ -204,15 +205,15 @@ export default function ExpensesClient({ categories, expenses, allInstallments, 
         <h2 className="text-base font-semibold text-foreground mb-4">רשימת הוצאות</h2>
         <ExpensesTable
           expenses={expenses}
-          filterPeriod={isAnnual ? String(year) : filterMonth}
+          filterPeriod={filterPeriod}
           closedMonths={closedMonths}
           onEdit={openEdit}
           onEditInstallment={setEditingInstallment}
         />
       </div>
 
-      {/* FAB — hidden when the viewed month is closed */}
-      {!isMonthClosed && (
+      {/* FAB — hidden when the viewed month is closed (monthly view only) */}
+      {!(isMonthClosed && !isAnnual) && (
         <button
           onClick={openAdd}
           className="fixed bottom-8 left-8 bg-primary text-primary-foreground w-14 h-14 rounded-full shadow-lg text-2xl flex items-center justify-center hover:bg-primary/90 transition-colors z-40"
