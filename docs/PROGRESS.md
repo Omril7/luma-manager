@@ -1,3 +1,12 @@
+## [2026-09-29] Income: advance payment as a separate record
+- Supersedes the `advance_amount`/`advance_date` columns: an advance is now its own `income` row (`is_advance = true`) dated when received, so charts/totals/cash flow count it in the right month; the remainder is a second row on the sale date
+- `createIncome` inserts both rows in one call; discount, delivery and work hours stay on the remainder row; Zod checks advance ≤ final price and delivery ≤ remainder
+- `IncomeModal`: advance section only when adding (editing edits a single row); table shows a "מקדמה" badge on advance rows
+- Migration `20260929000003_income_advance_rows.sql` converts rows already saved with an advance, then drops the two old columns
+- Removed `ProductBreakdownTable` from the income page (component deleted)
+- Known: "מספר הזמנות" counts rows, so an order with an advance counts twice
+- NOT YET APPLIED to the DB — run the migration in the Supabase SQL Editor
+
 ## [2026-09-29] Income: pricing autocomplete
 - `IncomeModal` product name suggests saved `product_pricings` names (native datalist, free text still allowed); picking an exact match fills work hours from the pricing's `time_hours`. Price is never auto-filled
 - No schema change; income page now also loads `product_pricings (id, name, time_hours)`

@@ -1,3 +1,8 @@
+## [2026-09-29] Decision: advance payments are separate income rows
+Context: An advance can be received in a different month than the rest (e.g. AUG vs SEP) and must show in that month's charts and totals.
+Decision: Saving an income with an advance inserts two rows — an `is_advance` row (advance amount, advance date) and a remainder row (sale date). Discount, delivery and work hours stay on the remainder. No link column between them.
+Reason: Every consumer (charts, dashboard, VAT) already keys on `income_date` + `final_price`, so no other code changes. Trade-off: the two rows are related only by product/order number, and order counts include both.
+
 ## [2026-09-29] Decision: pricings compute price live from settings
 Context: `product_pricings` stored `hourly_rate`, `overhead_per_hour` and `suggested_price`, freezing each pricing at save time.
 Decision: Removed those columns; rates are read from settings and the price is calculated on render.

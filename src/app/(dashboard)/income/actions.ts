@@ -93,6 +93,9 @@ const incomeSchema = z.object({
   if (d.advance_amount > final) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['advance_amount'], message: 'המקדמה גדולה מהמחיר הסופי' })
   }
+  if (d.delivery_amount > final - d.advance_amount) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['delivery_amount'], message: 'סכום המשלוח גדול מהיתרה' })
+  }
 })
 
 export async function createIncome(_prev: unknown, formData: FormData) {
@@ -119,23 +122,40 @@ export async function createIncome(_prev: unknown, formData: FormData) {
 
   const discountAmount = parsed.data.has_discount ? parsed.data.discount_amount : 0
   const finalPrice = parsed.data.original_price - discountAmount
+  const advance = parsed.data.advance_amount
 
-  const { error } = await supabase.from('income').insert({
+  const base = {
     user_id: user.id,
     source: 'manual',
     product_id: parsed.data.product_id ?? null,
     product_name: parsed.data.product_name,
     order_id: parsed.data.order_id ?? null,
-    original_price: parsed.data.original_price,
+    notes: parsed.data.notes ?? null,
+  }
+
+  // The rest of the payment (or the whole payment when there is no advance)
+  const mainRow = {
+    ...base,
+    original_price: parsed.data.original_price - advance,
     discount_amount: discountAmount,
-    final_price: finalPrice,
+    final_price: finalPrice - advance,
     delivery_amount: parsed.data.delivery_amount,
-    advance_amount: parsed.data.advance_amount,
-    advance_date: parsed.data.advance_amount > 0 ? parsed.data.advance_date ?? null : null,
     work_hours: parsed.data.work_hours,
     income_date: parsed.data.income_date,
-    notes: parsed.data.notes ?? null,
-  })
+  }
+  // An advance is its own record, dated when it was received
+  const advanceRow = {
+    ...base,
+    original_price: advance,
+    discount_amount: 0,
+    final_price: advance,
+    delivery_amount: 0,
+    work_hours: 0,
+    income_date: parsed.data.advance_date ?? parsed.data.income_date,
+    is_advance: true,
+  }
+
+  const { error } = await supabase.from('income').insert(advance > 0 ? [advanceRow, mainRow] : [mainRow])
   if (error) return { error: error.message }
   revalidatePath('/income')
   return { success: true }
@@ -175,8 +195,6 @@ export async function updateIncome(_prev: unknown, formData: FormData) {
     discount_amount: discountAmount,
     final_price: finalPrice,
     delivery_amount: parsed.data.delivery_amount,
-    advance_amount: parsed.data.advance_amount,
-    advance_date: parsed.data.advance_amount > 0 ? parsed.data.advance_date ?? null : null,
     work_hours: parsed.data.work_hours,
     income_date: parsed.data.income_date,
     notes: parsed.data.notes ?? null,

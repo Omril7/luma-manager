@@ -6,7 +6,6 @@ import { ChevronLeft, ChevronRight, Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import IncomeSummaryCards from './IncomeSummaryCards'
 import IncomeCharts from './IncomeCharts'
-import ProductBreakdownTable from './ProductBreakdownTable'
 import IncomeTable from './IncomeTable'
 import IncomeModal from './IncomeModal'
 import ProductsModal from './ProductsModal'
@@ -27,8 +26,7 @@ type IncomeRow = {
   discount_amount: number
   final_price: number
   delivery_amount: number
-  advance_amount: number
-  advance_date: string | null
+  is_advance: boolean
   work_hours: number
   income_date: string
   notes: string | null
@@ -58,7 +56,6 @@ export default function IncomeClient({ products, pricings, incomeRows, closedMon
   const filterMonth = `${year}-${String(month).padStart(2, '0')}`
   const isMonthClosed = closedMonths.includes(filterMonth)
   const monthRows = incomeRows.filter(r => r.income_date.slice(0, 7) === filterMonth)
-  const annualRows = incomeRows.filter(r => r.income_date.slice(0, 4) === String(year))
 
   function prevMonth() {
     if (month === 1) { setMonth(12); setYear(y => y - 1) }
@@ -157,9 +154,6 @@ export default function IncomeClient({ products, pricings, incomeRows, closedMon
         year={year}
         month={month}
       />
-
-      {/* Product breakdown */}
-      <ProductBreakdownTable rows={isAnnual ? annualRows : monthRows} />
 
       {/* Table */}
       <div className="bg-card rounded-xl border border-border p-5">

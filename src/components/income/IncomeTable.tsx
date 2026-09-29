@@ -16,8 +16,7 @@ type IncomeRow = {
   discount_amount: number
   final_price: number
   delivery_amount: number
-  advance_amount: number
-  advance_date: string | null
+  is_advance: boolean
   work_hours: number
   income_date: string
   notes: string | null
@@ -56,7 +55,12 @@ export default function IncomeTable({ rows, filterMonth, isMonthClosed, onEdit }
       key: 'product_name',
       header: 'מוצר',
       sortValue: r => r.product_name,
-      cell: r => <span className="font-medium">{r.product_name}</span>,
+      cell: r => (
+        <span className="font-medium">
+          {r.product_name}
+          {r.is_advance && <span className="ms-2 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 font-normal">מקדמה</span>}
+        </span>
+      ),
     },
     {
       key: 'order_id',
@@ -96,19 +100,6 @@ export default function IncomeTable({ rows, filterMonth, isMonthClosed, onEdit }
       sortValue: r => r.delivery_amount,
       cell: r => r.delivery_amount > 0
         ? <span className="text-blue-600 dark:text-blue-400">{formatILS(r.delivery_amount, 2)}</span>
-        : <span className="text-muted-foreground/50">—</span>,
-    },
-    {
-      key: 'advance_amount',
-      header: 'מקדמה',
-      sortValue: r => r.advance_amount,
-      cell: r => r.advance_amount > 0
-        ? (
-          <span className="tabular-nums">
-            {formatILS(r.advance_amount, 2)}
-            {r.advance_date && <span className="block text-xs text-muted-foreground">{new Date(r.advance_date).toLocaleDateString('he-IL')}</span>}
-          </span>
-        )
         : <span className="text-muted-foreground/50">—</span>,
     },
     {
