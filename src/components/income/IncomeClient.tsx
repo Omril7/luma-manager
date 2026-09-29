@@ -160,8 +160,8 @@ export default function IncomeClient({ products, pricings, incomeRows, closedMon
         <h2 className="text-base font-semibold text-gray-800 mb-4">רשימת הכנסות</h2>
         <IncomeTable
           rows={incomeRows}
-          filterMonth={filterMonth}
-          isMonthClosed={isMonthClosed}
+          filterPeriod={isAnnual ? String(year) : filterMonth}
+          closedMonths={closedMonths}
           onEdit={openEdit}
         />
       </div>

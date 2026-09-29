@@ -25,12 +25,12 @@ type IncomeRow = {
 
 type Props = {
   rows: IncomeRow[]
-  filterMonth: string
-  isMonthClosed: boolean
+  filterPeriod: string // 'YYYY' (annual) or 'YYYY-MM'
+  closedMonths: string[]
   onEdit: (row: IncomeRow) => void
 }
 
-export default function IncomeTable({ rows, filterMonth, isMonthClosed, onEdit }: Props) {
+export default function IncomeTable({ rows, filterPeriod, closedMonths, onEdit }: Props) {
   const [isPending, startTransition] = useTransition()
 
   function handleDelete(id: string) {
@@ -42,7 +42,7 @@ export default function IncomeTable({ rows, filterMonth, isMonthClosed, onEdit }
     })
   }
 
-  const filtered = rows.filter(r => r.income_date.slice(0, 7) === filterMonth)
+  const filtered = rows.filter(r => r.income_date.startsWith(filterPeriod))
 
   const columns: DataTableColumn<IncomeRow>[] = [
     {
@@ -117,10 +117,10 @@ export default function IncomeTable({ rows, filterMonth, isMonthClosed, onEdit }
       header: 'פעולות',
       cell: r => (
         <div className="flex gap-1">
-          {!isMonthClosed && (
+          {!closedMonths.includes(r.income_date.slice(0, 7)) && (
             <Button variant="ghost" size="sm" onClick={() => onEdit(r)} className="h-7 px-2 text-xs text-muted-foreground hover:text-primary">ערוך</Button>
           )}
-          {!isMonthClosed && (
+          {!closedMonths.includes(r.income_date.slice(0, 7)) && (
             <Button variant="ghost" size="sm" onClick={() => handleDelete(r.id)} disabled={isPending} className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive">מחק</Button>
           )}
         </div>
