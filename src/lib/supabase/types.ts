@@ -422,6 +422,7 @@ export type Database = {
           id: string
           user_id: string
           name: string
+          folder: string | null
           time_hours: number
           profit_type: string
           profit_value: number
@@ -431,6 +432,7 @@ export type Database = {
           id?: string
           user_id: string
           name: string
+          folder?: string | null
           time_hours?: number
           profit_type?: string
           profit_value?: number
@@ -440,6 +442,7 @@ export type Database = {
           id?: string
           user_id?: string
           name?: string
+          folder?: string | null
           time_hours?: number
           profit_type?: string
           profit_value?: number

@@ -7,11 +7,12 @@ interface Props {
   pricings: PricingRow[]
   defaultHourlyRate: number
   defaultOverheadPerHour: number
+  vatRate: number
   materialCategories: MaterialCategory[]
   materials: Material[]
 }
 
-export default function PricingClient({ pricings, defaultHourlyRate, defaultOverheadPerHour, materialCategories, materials }: Props) {
+export default function PricingClient({ pricings, defaultHourlyRate, defaultOverheadPerHour, vatRate, materialCategories, materials }: Props) {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-foreground">תמחור מוצרים</h1>
@@ -20,6 +21,7 @@ export default function PricingClient({ pricings, defaultHourlyRate, defaultOver
           pricings={pricings}
           defaultHourlyRate={defaultHourlyRate}
           defaultOverheadPerHour={defaultOverheadPerHour}
+          vatRate={vatRate}
           materials={materials}
         />
         <MaterialsPanel categories={materialCategories} materials={materials} />

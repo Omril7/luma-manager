@@ -1,3 +1,9 @@
+## [2026-09-29] Pricing: VAT-inclusive price + folders
+- Pricing summary (wizard step 4 + detail modal) now shows VAT amount and "מחיר כולל מע״מ" on top of the ex-VAT suggested price (via `lib/vat.ts`, rate from settings); nothing stored
+- Optional `folder` text label on `product_pricings` (migration `20260929000001_pricing_folder.sql`); folder input with autocomplete of existing folders in the wizard, filter chips + folder column in `PricingHistoryPanel`
+- Folders are plain text (no folders table) — renaming a folder means editing each pricing
+- NOT YET APPLIED to the DB — run the migration in the Supabase SQL Editor
+
 ## [2026-09-29] Pricing uses live settings rates
 - Dropped `hourly_rate`, `overhead_per_hour`, `suggested_price` from `product_pricings` (migration `20260929000000_pricing_live_rates.sql`) — pricings no longer snapshot point-in-time values
 - Hourly rate / overhead now come from `settings.default_hourly_rate` / `default_overhead_per_hour` (derived in settings); wizard steps 2–3 show them read-only

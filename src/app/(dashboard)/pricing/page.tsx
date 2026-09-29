@@ -15,12 +15,12 @@ export default async function PricingPage() {
   ] = await Promise.all([
     supabase
       .from('settings')
-      .select('default_hourly_rate, default_overhead_per_hour')
+      .select('default_hourly_rate, default_overhead_per_hour, vat_rate')
       .eq('user_id', user.id)
       .single(),
     supabase
       .from('product_pricings')
-      .select('id, name, time_hours, profit_type, profit_value, created_at, pricing_parts(id, name, quantity, material_id, price, materials(price, unit))')
+      .select('id, name, folder, time_hours, profit_type, profit_value, created_at, pricing_parts(id, name, quantity, material_id, price, materials(price, unit))')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false }),
     supabase
@@ -40,6 +40,7 @@ export default async function PricingPage() {
       pricings={(pricings ?? []) as unknown as Parameters<typeof PricingClient>[0]['pricings']}
       defaultHourlyRate={settings?.default_hourly_rate ?? 0}
       defaultOverheadPerHour={settings?.default_overhead_per_hour ?? 0}
+      vatRate={settings?.vat_rate ?? 0}
       materialCategories={materialCategories ?? []}
       materials={(materials ?? []) as unknown as Parameters<typeof PricingClient>[0]['materials']}
     />

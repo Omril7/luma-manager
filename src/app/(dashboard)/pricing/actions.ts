@@ -13,6 +13,7 @@ const partSchema = z.object({
 
 const savePricingSchema = z.object({
   name: z.string().min(1, 'שם תמחור נדרש'),
+  folder: z.string().trim().max(60).nullable().optional(),
   time_hours: z.coerce.number().min(0),
   profit_type: z.enum(['percent', 'fixed']),
   profit_value: z.coerce.number().min(0),
@@ -34,6 +35,7 @@ export async function savePricing(input: SavePricingInput) {
     .insert({
       user_id: user.id,
       name: parsed.data.name,
+      folder: parsed.data.folder || null,
       time_hours: parsed.data.time_hours,
       profit_type: parsed.data.profit_type,
       profit_value: parsed.data.profit_value,
@@ -73,6 +75,7 @@ export async function updatePricing(id: string, input: SavePricingInput) {
     .from('product_pricings')
     .update({
       name: parsed.data.name,
+      folder: parsed.data.folder || null,
       time_hours: parsed.data.time_hours,
       profit_type: parsed.data.profit_type,
       profit_value: parsed.data.profit_value,

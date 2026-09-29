@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { cn } from '@/lib/utils'
 import { Autocomplete } from '@/components/ui/autocomplete'
 import { type Material } from '@/components/pricing/MaterialsPanel'
+import { vatOnExAmount, amountWithVat } from '@/lib/vat'
 
 export interface PricingPart {
   id: string
@@ -25,6 +26,7 @@ export interface PricingPart {
 export interface PricingRow {
   id: string
   name: string
+  folder: string | null
   time_hours: number
   profit_type: string
   profit_value: number
@@ -50,6 +52,7 @@ interface Props {
   pricings: PricingRow[]
   defaultHourlyRate: number
   defaultOverheadPerHour: number
+  vatRate: number
   materials: Material[]
 }
 
@@ -63,6 +66,7 @@ interface Part {
 
 const STEPS = ['חומרי גלם', 'עבודה', 'הוצאות נלוות', 'רווח']
 const PAGE_SIZE = 10
+const NO_FOLDER = '__none__'
 
 function ils(n: number) {
   return n.toLocaleString('he-IL', { style: 'currency', currency: 'ILS', maximumFractionDigits: 0 })
@@ -74,11 +78,12 @@ function formatDate(iso: string) {
 
 const EMPTY_PART: Part = { materialId: null, name: '', unit: '', unitPrice: 0, quantity: 1 }
 
-export default function PricingHistoryPanel({ pricings, defaultHourlyRate, defaultOverheadPerHour, materials }: Props) {
+export default function PricingHistoryPanel({ pricings, defaultHourlyRate, defaultOverheadPerHour, vatRate, materials }: Props) {
   // list state
   const [detailId, setDetailId]      = useState<string | null>(null)
   const [search, setSearch]          = useState('')
   const [page, setPage]              = useState(0)
+  const [folderFilter, setFolderFilter] = useState<string | null>(null) // null = all, NO_FOLDER = unassigned
   const [isPending, startTransition] = useTransition()
 
   // wizard state
@@ -87,12 +92,13 @@ export default function PricingHistoryPanel({ pricings, defaultHourlyRate, defau
   const [step, setStep]                   = useState(0)
   const [wizardError, setWizardError]     = useState('')
   const [wizardName, setWizardName]       = useState('')
+  const [folder, setFolder]               = useState('')
   const [parts, setParts]                 = useState<Part[]>([EMPTY_PART])
   const [timeHours, setTimeHours]         = useState(0)
   const [profitType, setProfitType]       = useState<'percent' | 'fixed'>('percent')
   const [profitValue, setProfitValue]     = useState(0)
 
-  useEffect(() => { setPage(0) }, [search])
+  useEffect(() => { setPage(0) }, [search, folderFilter])
 
   const materialsTotal  = parts.reduce((s, p) => s + p.unitPrice * p.quantity, 0)
   const laborTotal      = timeHours * defaultHourlyRate
@@ -101,10 +107,20 @@ export default function PricingHistoryPanel({ pricings, defaultHourlyRate, defau
   const profitAmount    = profitType === 'percent' ? costBase * (profitValue / 100) : profitValue
   const suggestedPrice  = costBase + profitAmount
 
+  const folders = Array.from(new Set(pricings.map(p => p.folder).filter((f): f is string => !!f))).sort((a, b) => a.localeCompare(b, 'he'))
+  const hasUnassigned = pricings.some(p => !p.folder)
+
+  // the selected folder disappears when its last pricing is moved/deleted
+  useEffect(() => {
+    if (folderFilter === null) return
+    if (folderFilter === NO_FOLDER ? !hasUnassigned : !folders.includes(folderFilter)) setFolderFilter(null)
+  }, [folderFilter, folders, hasUnassigned])
+
   const filtered = pricings.filter(p => {
+    if (folderFilter === NO_FOLDER ? !!p.folder : folderFilter !== null && p.folder !== folderFilter) return false
     const q = search.trim().toLowerCase()
     if (!q) return true
-    return p.name.toLowerCase().includes(q) || formatDate(p.created_at).includes(q)
+    return p.name.toLowerCase().includes(q) || formatDate(p.created_at).includes(q) || (p.folder ?? '').toLowerCase().includes(q)
   })
 
   const pagination: DataTablePagination = {
@@ -114,7 +130,7 @@ export default function PricingHistoryPanel({ pricings, defaultHourlyRate, defau
   const detailPricing = pricings.find(p => p.id === detailId)
 
   function resetWizard() {
-    setStep(0); setEditingId(null); setWizardName(''); setWizardError('')
+    setStep(0); setEditingId(null); setWizardName(''); setFolder(''); setWizardError('')
     setParts([EMPTY_PART])
     setTimeHours(0); setProfitType('percent'); setProfitValue(0)
   }
@@ -125,6 +141,7 @@ export default function PricingHistoryPanel({ pricings, defaultHourlyRate, defau
     setEditingId(pricing.id)
     setStep(0)
     setWizardName(pricing.name)
+    setFolder(pricing.folder ?? '')
     setParts(pricing.pricing_parts.length > 0
       ? pricing.pricing_parts.map(pp => {
           if (pp.material_id && pp.materials) {
@@ -170,6 +187,7 @@ export default function PricingHistoryPanel({ pricings, defaultHourlyRate, defau
 
     const input: SavePricingInput = {
       name: wizardName,
+      folder: folder.trim() || null,
       time_hours: timeHours,
       profit_type: profitType,
       profit_value: profitValue,
@@ -209,6 +227,11 @@ export default function PricingHistoryPanel({ pricings, defaultHourlyRate, defau
           {p.name}
         </button>
       ),
+    },
+    {
+      key: 'folder', header: 'תיקייה',
+      className: 'text-muted-foreground', sortValue: p => p.folder ?? '',
+      cell: p => p.folder || '—',
     },
     {
       key: 'date', header: 'תאריך',
@@ -263,6 +286,25 @@ export default function PricingHistoryPanel({ pricings, defaultHourlyRate, defau
           </button>
         )}
       </div>
+
+      {/* Folder filter */}
+      {(folders.length > 0) && (
+        <div className="flex flex-wrap gap-1.5">
+          {([[null, 'הכל'], ...folders.map(f => [f, f] as const), ...(hasUnassigned ? [[NO_FOLDER, 'ללא תיקייה'] as const] : [])] as const).map(([val, label]) => (
+            <button
+              key={val ?? 'all'} type="button" onClick={() => setFolderFilter(val)}
+              className={cn(
+                'px-3 py-1 rounded-full text-sm border transition-colors',
+                folderFilter === val
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-card text-muted-foreground border-border hover:text-foreground'
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Table */}
       <div className="bg-card rounded-lg border border-border px-4 py-3">
@@ -351,6 +393,16 @@ export default function PricingHistoryPanel({ pricings, defaultHourlyRate, defau
                     <span>מחיר מומלץ</span>
                     <span>{fmt(total)} ₪</span>
                   </div>
+
+                  {/* VAT */}
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>מע״מ <span className="text-xs mr-1 text-muted-foreground/60">({vatRate}%)</span></span>
+                    <span>+ {fmt(vatOnExAmount(total, vatRate))} ₪</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-foreground border-t pt-2 mt-0.5">
+                    <span>מחיר כולל מע״מ</span>
+                    <span>{fmt(amountWithVat(total, vatRate))} ₪</span>
+                  </div>
                 </div>
 
                 <div className="flex justify-end">
@@ -400,10 +452,10 @@ export default function PricingHistoryPanel({ pricings, defaultHourlyRate, defau
           </div>
 
           <div className="min-h-[260px] flex-1 overflow-y-auto pr-1 -mr-1">
-            {step === 0 && <Step1 parts={parts} setParts={setParts} wizardName={wizardName} setWizardName={setWizardName} materialsTotal={materialsTotal} materials={materials} />}
+            {step === 0 && <Step1 parts={parts} setParts={setParts} wizardName={wizardName} setWizardName={setWizardName} folder={folder} setFolder={setFolder} folders={folders} materialsTotal={materialsTotal} materials={materials} />}
             {step === 1 && <Step2 hourlyRate={defaultHourlyRate} timeHours={timeHours} setTimeHours={setTimeHours} laborTotal={laborTotal} />}
             {step === 2 && <Step3 overheadPerHour={defaultOverheadPerHour} timeHours={timeHours} overheadTotal={overheadTotal} />}
-            {step === 3 && <Step4 profitType={profitType} setProfitType={setProfitType} profitValue={profitValue} setProfitValue={setProfitValue} costBase={costBase} profitAmount={profitAmount} suggestedPrice={suggestedPrice} materialsTotal={materialsTotal} laborTotal={laborTotal} overheadTotal={overheadTotal} />}
+            {step === 3 && <Step4 profitType={profitType} setProfitType={setProfitType} profitValue={profitValue} setProfitValue={setProfitValue} costBase={costBase} profitAmount={profitAmount} suggestedPrice={suggestedPrice} vatRate={vatRate} materialsTotal={materialsTotal} laborTotal={laborTotal} overheadTotal={overheadTotal} />}
           </div>
 
           {wizardError && <p className="text-red-500 text-sm shrink-0">{wizardError}</p>}
@@ -426,12 +478,15 @@ export default function PricingHistoryPanel({ pricings, defaultHourlyRate, defau
 // ─── Step Components ───────────────────────────────────────────────────────────
 
 function Step1({
-  parts, setParts, wizardName, setWizardName, materialsTotal, materials,
+  parts, setParts, wizardName, setWizardName, folder, setFolder, folders, materialsTotal, materials,
 }: {
   parts: Part[]
   setParts: React.Dispatch<React.SetStateAction<Part[]>>
   wizardName: string
   setWizardName: (v: string) => void
+  folder: string
+  setFolder: (v: string) => void
+  folders: string[]
   materialsTotal: number
   materials: Material[]
 }) {
@@ -464,6 +519,17 @@ function Step1({
       <div className="space-y-1">
         <Label>שם התמחור</Label>
         <Input value={wizardName} onChange={e => setWizardName(e.target.value)} placeholder="למשל: כרית מעוצבת" />
+      </div>
+      <div className="space-y-1">
+        <Label>תיקייה (אופציונלי)</Label>
+        <Autocomplete
+          options={folders.map(f => ({ value: f, label: f }))}
+          value={folder}
+          onChange={setFolder}
+          onSelect={opt => setFolder(opt.label)}
+          placeholder="למשל: כריות"
+          emptyMessage="תיקייה חדשה תיווצר"
+        />
       </div>
       <div className="space-y-2">
         <Label>חומרי גלם</Label>
@@ -570,12 +636,12 @@ function Step3({
 
 function Step4({
   profitType, setProfitType, profitValue, setProfitValue,
-  costBase, profitAmount, suggestedPrice,
+  costBase, profitAmount, suggestedPrice, vatRate,
   materialsTotal, laborTotal, overheadTotal,
 }: {
   profitType: 'percent' | 'fixed'; setProfitType: (v: 'percent' | 'fixed') => void
   profitValue: number; setProfitValue: (v: number) => void
-  costBase: number; profitAmount: number; suggestedPrice: number
+  costBase: number; profitAmount: number; suggestedPrice: number; vatRate: number
   materialsTotal: number; laborTotal: number; overheadTotal: number
 }) {
   return (
@@ -620,6 +686,12 @@ function Step4({
         </div>
         <div className="flex justify-between font-bold text-lg text-green-700 border-t pt-1">
           <span>מחיר מומלץ</span><span>{suggestedPrice.toLocaleString('he-IL', { maximumFractionDigits: 0 })} ₪</span>
+        </div>
+        <div className="flex justify-between text-muted-foreground">
+          <span>מע״מ ({vatRate}%)</span><span>+ {vatOnExAmount(suggestedPrice, vatRate).toLocaleString('he-IL', { maximumFractionDigits: 0 })} ₪</span>
+        </div>
+        <div className="flex justify-between font-bold text-foreground border-t pt-1">
+          <span>מחיר כולל מע״מ</span><span>{amountWithVat(suggestedPrice, vatRate).toLocaleString('he-IL', { maximumFractionDigits: 0 })} ₪</span>
         </div>
       </div>
     </div>
