@@ -142,6 +142,7 @@ export async function createIncome(_prev: unknown, formData: FormData) {
     delivery_amount: parsed.data.delivery_amount,
     work_hours: parsed.data.work_hours,
     income_date: parsed.data.income_date,
+    is_advance: false,
   }
   // An advance is its own record, dated when it was received
   const advanceRow = {
