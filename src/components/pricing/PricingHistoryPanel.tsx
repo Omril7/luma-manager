@@ -25,12 +25,9 @@ export interface PricingPart {
 export interface PricingRow {
   id: string
   name: string
-  hourly_rate: number
   time_hours: number
-  overhead_per_hour: number
   profit_type: string
   profit_value: number
-  suggested_price: number | null
   created_at: string
   pricing_parts: PricingPart[]
 }
@@ -38,6 +35,15 @@ export interface PricingRow {
 function partTotal(pp: PricingPart): number {
   if (pp.material_id && pp.materials) return pp.materials.price * pp.quantity
   return pp.price ?? 0
+}
+
+function calcPricing(p: PricingRow, hourlyRate: number, overheadPerHour: number) {
+  const materials = p.pricing_parts.reduce((s, pp) => s + partTotal(pp), 0)
+  const labor     = p.time_hours * hourlyRate
+  const overhead  = p.time_hours * overheadPerHour
+  const base      = materials + labor + overhead
+  const profit    = p.profit_type === 'percent' ? base * (p.profit_value / 100) : p.profit_value
+  return { materials, labor, overhead, base, profit, total: base + profit }
 }
 
 interface Props {
@@ -82,17 +88,15 @@ export default function PricingHistoryPanel({ pricings, defaultHourlyRate, defau
   const [wizardError, setWizardError]     = useState('')
   const [wizardName, setWizardName]       = useState('')
   const [parts, setParts]                 = useState<Part[]>([EMPTY_PART])
-  const [hourlyRate, setHourlyRate]       = useState(defaultHourlyRate)
   const [timeHours, setTimeHours]         = useState(0)
-  const [overheadPerHour, setOverheadPerHour] = useState(defaultOverheadPerHour)
   const [profitType, setProfitType]       = useState<'percent' | 'fixed'>('percent')
   const [profitValue, setProfitValue]     = useState(0)
 
   useEffect(() => { setPage(0) }, [search])
 
   const materialsTotal  = parts.reduce((s, p) => s + p.unitPrice * p.quantity, 0)
-  const laborTotal      = timeHours * hourlyRate
-  const overheadTotal   = timeHours * overheadPerHour
+  const laborTotal      = timeHours * defaultHourlyRate
+  const overheadTotal   = timeHours * defaultOverheadPerHour
   const costBase        = materialsTotal + laborTotal + overheadTotal
   const profitAmount    = profitType === 'percent' ? costBase * (profitValue / 100) : profitValue
   const suggestedPrice  = costBase + profitAmount
@@ -111,8 +115,8 @@ export default function PricingHistoryPanel({ pricings, defaultHourlyRate, defau
 
   function resetWizard() {
     setStep(0); setEditingId(null); setWizardName(''); setWizardError('')
-    setParts([EMPTY_PART]); setHourlyRate(defaultHourlyRate)
-    setTimeHours(0); setOverheadPerHour(defaultOverheadPerHour); setProfitType('percent'); setProfitValue(0)
+    setParts([EMPTY_PART])
+    setTimeHours(0); setProfitType('percent'); setProfitValue(0)
   }
 
   function openNew() { resetWizard(); setShowWizard(true) }
@@ -137,9 +141,7 @@ export default function PricingHistoryPanel({ pricings, defaultHourlyRate, defau
         })
       : [EMPTY_PART]
     )
-    setHourlyRate(pricing.hourly_rate)
     setTimeHours(pricing.time_hours)
-    setOverheadPerHour(pricing.overhead_per_hour)
     setProfitType(pricing.profit_type as 'percent' | 'fixed')
     setProfitValue(pricing.profit_value)
     setWizardError('')
@@ -150,7 +152,7 @@ export default function PricingHistoryPanel({ pricings, defaultHourlyRate, defau
   function validateStep(s: number): string | null {
     if (s === 0 && !wizardName.trim()) return 'יש להזין שם לתמחור'
     if (s === 1 && (!timeHours || timeHours <= 0)) return 'יש להזין שעות עבודה'
-    if (s === 1 && (!hourlyRate || hourlyRate <= 0)) return 'יש להזין ערך שעה'
+    if (s === 1 && defaultHourlyRate <= 0) return 'יש להגדיר ערך שעה בהגדרות'
     if (s === 3 && (!profitValue || profitValue <= 0)) return 'יש להזין רווח'
     return null
   }
@@ -168,12 +170,9 @@ export default function PricingHistoryPanel({ pricings, defaultHourlyRate, defau
 
     const input: SavePricingInput = {
       name: wizardName,
-      hourly_rate: hourlyRate,
       time_hours: timeHours,
-      overhead_per_hour: overheadPerHour,
       profit_type: profitType,
       profit_value: profitValue,
-      suggested_price: suggestedPrice,
       parts: parts.filter(p => p.name.trim()).map(p => p.materialId
         ? { name: p.name, material_id: p.materialId, quantity: p.quantity }
         : { name: p.name, price: p.unitPrice }
@@ -218,8 +217,8 @@ export default function PricingHistoryPanel({ pricings, defaultHourlyRate, defau
     },
     {
       key: 'price', header: 'מחיר מומלץ',
-      className: 'font-semibold text-green-700 tabular-nums', sortValue: p => p.suggested_price ?? 0,
-      cell: p => p.suggested_price != null ? ils(p.suggested_price) : '—',
+      className: 'font-semibold text-green-700 tabular-nums', sortValue: p => calcPricing(p, defaultHourlyRate, defaultOverheadPerHour).total,
+      cell: p => ils(calcPricing(p, defaultHourlyRate, defaultOverheadPerHour).total),
     },
     {
       key: 'actions', header: '', headerClassName: 'w-16', mobileHidden: true,
@@ -283,14 +282,8 @@ export default function PricingHistoryPanel({ pricings, defaultHourlyRate, defau
             )}
           </DialogHeader>
           {detailPricing && (() => {
-            const mTotal = detailPricing.pricing_parts.reduce((s, pp) => s + partTotal(pp), 0)
-            const lTotal = detailPricing.time_hours * detailPricing.hourly_rate
-            const oTotal = detailPricing.time_hours * detailPricing.overhead_per_hour
-            const base   = mTotal + lTotal + oTotal
-            const profit = detailPricing.profit_type === 'percent'
-              ? base * (detailPricing.profit_value / 100)
-              : detailPricing.profit_value
-            const total  = base + profit
+            const { materials: mTotal, labor: lTotal, overhead: oTotal, base, profit, total } =
+              calcPricing(detailPricing, defaultHourlyRate, defaultOverheadPerHour)
             const fmt    = (n: number) => n.toLocaleString('he-IL', { maximumFractionDigits: 0 })
             return (
               <div className="space-y-3">
@@ -317,7 +310,7 @@ export default function PricingHistoryPanel({ pricings, defaultHourlyRate, defau
                     <span className="flex flex-col">
                       <span>עבודה</span>
                       <span className="text-xs text-muted-foreground/60">
-                        {detailPricing.time_hours} ש׳ × {ils(detailPricing.hourly_rate)}
+                        {detailPricing.time_hours} ש׳ × {ils(defaultHourlyRate)}
                       </span>
                     </span>
                     <span>{fmt(lTotal)} ₪</span>
@@ -329,7 +322,7 @@ export default function PricingHistoryPanel({ pricings, defaultHourlyRate, defau
                       <span className="flex flex-col">
                         <span>הוצאות נלוות</span>
                         <span className="text-xs text-muted-foreground/60">
-                          {detailPricing.time_hours} ש׳ × {ils(detailPricing.overhead_per_hour)}
+                          {detailPricing.time_hours} ש׳ × {ils(defaultOverheadPerHour)}
                         </span>
                       </span>
                       <span>{fmt(oTotal)} ₪</span>
@@ -408,8 +401,8 @@ export default function PricingHistoryPanel({ pricings, defaultHourlyRate, defau
 
           <div className="min-h-[260px] flex-1 overflow-y-auto pr-1 -mr-1">
             {step === 0 && <Step1 parts={parts} setParts={setParts} wizardName={wizardName} setWizardName={setWizardName} materialsTotal={materialsTotal} materials={materials} />}
-            {step === 1 && <Step2 hourlyRate={hourlyRate} setHourlyRate={setHourlyRate} timeHours={timeHours} setTimeHours={setTimeHours} laborTotal={laborTotal} />}
-            {step === 2 && <Step3 overheadPerHour={overheadPerHour} setOverheadPerHour={setOverheadPerHour} timeHours={timeHours} overheadTotal={overheadTotal} />}
+            {step === 1 && <Step2 hourlyRate={defaultHourlyRate} timeHours={timeHours} setTimeHours={setTimeHours} laborTotal={laborTotal} />}
+            {step === 2 && <Step3 overheadPerHour={defaultOverheadPerHour} timeHours={timeHours} overheadTotal={overheadTotal} />}
             {step === 3 && <Step4 profitType={profitType} setProfitType={setProfitType} profitValue={profitValue} setProfitValue={setProfitValue} costBase={costBase} profitAmount={profitAmount} suggestedPrice={suggestedPrice} materialsTotal={materialsTotal} laborTotal={laborTotal} overheadTotal={overheadTotal} />}
           </div>
 
@@ -533,9 +526,9 @@ function Step1({
 }
 
 function Step2({
-  hourlyRate, setHourlyRate, timeHours, setTimeHours, laborTotal,
+  hourlyRate, timeHours, setTimeHours, laborTotal,
 }: {
-  hourlyRate: number; setHourlyRate: (v: number) => void
+  hourlyRate: number
   timeHours: number; setTimeHours: (v: number) => void
   laborTotal: number
 }) {
@@ -547,10 +540,8 @@ function Step2({
       </div>
       <div className="space-y-1">
         <Label>ערך שעה</Label>
-        <div className="relative">
-          <Input type="number" min={0} value={hourlyRate || ''} onChange={e => setHourlyRate(parseFloat(e.target.value) || 0)} className="pl-8" />
-          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">₪</span>
-        </div>
+        <p className="text-sm font-medium tabular-nums">{hourlyRate.toLocaleString('he-IL')} ₪</p>
+        <p className="text-xs text-muted-foreground">מחושב מההגדרות</p>
       </div>
       <p className="text-sm font-medium text-gray-700">סה&quot;כ עבודה: <strong>{laborTotal.toLocaleString('he-IL')} ₪</strong></p>
     </div>
@@ -558,9 +549,9 @@ function Step2({
 }
 
 function Step3({
-  overheadPerHour, setOverheadPerHour, timeHours, overheadTotal,
+  overheadPerHour, timeHours, overheadTotal,
 }: {
-  overheadPerHour: number; setOverheadPerHour: (v: number) => void
+  overheadPerHour: number
   timeHours: number; overheadTotal: number
 }) {
   return (
@@ -568,10 +559,8 @@ function Step3({
       <p className="text-sm text-gray-500">הוצאות נלוות לשעה: שחיקת ציוד, שכר דירה יחסי וכד׳.</p>
       <div className="space-y-1">
         <Label>הוצאות נלוות לשעה</Label>
-        <div className="relative">
-          <Input type="number" min={0} value={overheadPerHour || ''} onChange={e => setOverheadPerHour(parseFloat(e.target.value) || 0)} className="pl-8" />
-          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">₪</span>
-        </div>
+        <p className="text-sm font-medium tabular-nums">{overheadPerHour.toLocaleString('he-IL')} ₪</p>
+        <p className="text-xs text-muted-foreground">מחושב מההגדרות</p>
       </div>
       <p className="text-sm text-gray-500">× {timeHours} שעות</p>
       <p className="text-sm font-medium text-gray-700">סה&quot;כ הוצאות נלוות: <strong>{overheadTotal.toLocaleString('he-IL')} ₪</strong></p>

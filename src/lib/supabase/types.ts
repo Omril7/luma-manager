@@ -422,36 +422,27 @@ export type Database = {
           id: string
           user_id: string
           name: string
-          hourly_rate: number
           time_hours: number
-          overhead_per_hour: number
           profit_type: string
           profit_value: number
-          suggested_price: number | null
           created_at: string
         }
         Insert: {
           id?: string
           user_id: string
           name: string
-          hourly_rate?: number
           time_hours?: number
-          overhead_per_hour?: number
           profit_type?: string
           profit_value?: number
-          suggested_price?: number | null
           created_at?: string
         }
         Update: {
           id?: string
           user_id?: string
           name?: string
-          hourly_rate?: number
           time_hours?: number
-          overhead_per_hour?: number
           profit_type?: string
           profit_value?: number
-          suggested_price?: number | null
           created_at?: string
         }
         Relationships: []

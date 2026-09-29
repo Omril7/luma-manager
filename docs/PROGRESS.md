@@ -1,3 +1,10 @@
+## [2026-09-29] Pricing uses live settings rates
+- Dropped `hourly_rate`, `overhead_per_hour`, `suggested_price` from `product_pricings` (migration `20260929000000_pricing_live_rates.sql`) — pricings no longer snapshot point-in-time values
+- Hourly rate / overhead now come from `settings.default_hourly_rate` / `default_overhead_per_hour` (derived in settings); wizard steps 2–3 show them read-only
+- `PricingHistoryPanel`: suggested price + detail breakdown computed live via `calcPricing`
+- `types.ts` edited by hand for the 3 dropped columns (matches what regen would produce)
+- NOT YET APPLIED to the DB — run the migration in the Supabase SQL Editor, deploy together with this code
+
 ## [2026-07-15] Ex-VAT expense storage (Option B from docs/VAT.md)
 - Expense amounts (`total_amount`, installment `amount`, split `amount`) now stored EX-VAT; income stays VAT-inclusive
 - `lib/vat.ts`: added `vatOnExAmount` + `amountWithVat`; `installmentVat` now adds VAT on top of the ex-VAT total (installment #1 only); removed unused `amountWithoutVat`; kept `extractVat` for income (VAT report)

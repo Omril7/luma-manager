@@ -13,12 +13,9 @@ const partSchema = z.object({
 
 const savePricingSchema = z.object({
   name: z.string().min(1, 'שם תמחור נדרש'),
-  hourly_rate: z.coerce.number().min(0),
   time_hours: z.coerce.number().min(0),
-  overhead_per_hour: z.coerce.number().min(0),
   profit_type: z.enum(['percent', 'fixed']),
   profit_value: z.coerce.number().min(0),
-  suggested_price: z.coerce.number().min(0),
   parts: z.array(partSchema),
 })
 
@@ -37,12 +34,9 @@ export async function savePricing(input: SavePricingInput) {
     .insert({
       user_id: user.id,
       name: parsed.data.name,
-      hourly_rate: parsed.data.hourly_rate,
       time_hours: parsed.data.time_hours,
-      overhead_per_hour: parsed.data.overhead_per_hour,
       profit_type: parsed.data.profit_type,
       profit_value: parsed.data.profit_value,
-      suggested_price: parsed.data.suggested_price,
     })
     .select('id')
     .single()
@@ -79,12 +73,9 @@ export async function updatePricing(id: string, input: SavePricingInput) {
     .from('product_pricings')
     .update({
       name: parsed.data.name,
-      hourly_rate: parsed.data.hourly_rate,
       time_hours: parsed.data.time_hours,
-      overhead_per_hour: parsed.data.overhead_per_hour,
       profit_type: parsed.data.profit_type,
       profit_value: parsed.data.profit_value,
-      suggested_price: parsed.data.suggested_price,
     })
     .eq('id', id)
     .eq('user_id', user.id)

@@ -1,3 +1,8 @@
+## [2026-09-29] Decision: pricings compute price live from settings
+Context: `product_pricings` stored `hourly_rate`, `overhead_per_hour` and `suggested_price`, freezing each pricing at save time.
+Decision: Removed those columns; rates are read from settings and the price is calculated on render.
+Reason: Changing salary/hours/overhead in settings should update all pricings automatically. Trade-off: historical prices are no longer preserved.
+
 ## [2026-07-15] Decision: expense storage switched to ex-VAT (Option B implemented)
 Context: Resolves the 2026-07-02 open question below. Plan lived in docs/VAT.md.
 Decision: `expenses.total_amount`, `expense_installments.amount`, and `expense_category_splits.amount` are now stored EX-VAT; `vat_amount` is unchanged in meaning; `income.final_price` stays VAT-inclusive. Backfill migration `20260715000000_ex_vat_storage.sql` derives ex-VAT values from each row's stored `vat_amount` (rate-independent), handles recurring expenses per-month (not sum-of-installments), and converts only VAT-recognized splits (non-deductible VAT stays embedded as cost).
