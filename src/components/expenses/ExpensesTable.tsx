@@ -1,6 +1,6 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { deleteExpense } from '@/app/(dashboard)/expenses/actions'
 import { toast } from 'sonner'
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table'
@@ -49,10 +49,12 @@ type InstallmentEditTarget = {
   receipts: Receipt[]
 }
 
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
+
 type Props = {
   expenses: Expense[]
-  filterMonth: string
-  isMonthClosed: boolean
+  filterPeriod: string // 'YYYY' (annual) or 'YYYY-MM'
+  closedMonths: string[]
   onEdit: (expense: Expense) => void
   onEditInstallment: (target: InstallmentEditTarget) => void
 }
@@ -66,8 +68,15 @@ type Row = Expense & {
   _dueMonth: string
 }
 
-export default function ExpensesTable({ expenses, filterMonth, isMonthClosed, onEdit, onEditInstallment }: Props) {
+export default function ExpensesTable({ expenses, filterPeriod, closedMonths, onEdit, onEditInstallment }: Props) {
   const [isPending, startTransition] = useTransition()
+  const [page, setPage] = useState(0)
+  const [pageSize, setPageSize] = useState(10)
+  const [prevPeriod, setPrevPeriod] = useState(filterPeriod)
+  if (prevPeriod !== filterPeriod) {
+    setPrevPeriod(filterPeriod)
+    setPage(0)
+  }
 
   function handleDelete(id: string) {
     if (!confirm('למחוק הוצאה זו?')) return
@@ -78,20 +87,18 @@ export default function ExpensesTable({ expenses, filterMonth, isMonthClosed, on
     })
   }
 
-  const rows: Row[] = expenses
-    .map(exp => {
-      const inst = exp.expense_installments.find(i => i.due_month.slice(0, 7) === filterMonth)
-      if (!inst) return null
-      return {
+  const rows: Row[] = expenses.flatMap(exp =>
+    exp.expense_installments
+      .filter(i => i.due_month.startsWith(filterPeriod))
+      .map(inst => ({
         ...exp,
         _installmentId: inst.id,
         _installmentNum: inst.installment_number,
         _installmentAmt: inst.amount,
         _vatAmt: inst.vat_amount,
         _dueMonth: inst.due_month,
-      }
-    })
-    .filter((r): r is Row => r !== null)
+      }))
+  )
 
   const columns: DataTableColumn<Row>[] = [
     {
@@ -195,7 +202,7 @@ export default function ExpensesTable({ expenses, filterMonth, isMonthClosed, on
       header: 'פעולות',
       cell: r => (
         <div className="flex gap-1">
-          {!isMonthClosed && (r.is_recurring && r._installmentNum > 1 ? (
+          {!closedMonths.includes(r._dueMonth.slice(0, 7)) && (r.is_recurring && r._installmentNum > 1 ? (
             <>
               <Button
                 variant="ghost"
@@ -217,7 +224,7 @@ export default function ExpensesTable({ expenses, filterMonth, isMonthClosed, on
           ) : (
             <Button variant="ghost" size="sm" onClick={() => onEdit(r)} className="h-7 px-2 text-xs text-muted-foreground hover:text-primary">ערוך</Button>
           ))}
-          {!isMonthClosed && (
+          {!closedMonths.includes(r._dueMonth.slice(0, 7)) && (
             <Button variant="ghost" size="sm" onClick={() => handleDelete(r.id)} disabled={isPending} className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive">מחק</Button>
           )}
         </div>
@@ -229,8 +236,9 @@ export default function ExpensesTable({ expenses, filterMonth, isMonthClosed, on
     <DataTable
       columns={columns}
       data={rows}
-      rowKey={r => r.id}
-      emptyMessage="אין הוצאות לחודש זה"
+      rowKey={r => r._installmentId}
+      pagination={{ page, pageSize, total: rows.length, onPageChange: setPage, pageSizeOptions: PAGE_SIZE_OPTIONS, onPageSizeChange: n => { setPageSize(n); setPage(0) } }}
+      emptyMessage="אין הוצאות בתקופה זו"
     />
   )
 }

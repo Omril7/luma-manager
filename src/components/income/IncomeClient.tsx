@@ -78,7 +78,7 @@ export default function IncomeClient({ products, pricings, incomeRows, closedMon
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h1 className="text-2xl font-bold text-foreground">הכנסות</h1>

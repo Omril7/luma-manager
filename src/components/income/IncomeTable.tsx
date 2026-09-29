@@ -1,6 +1,6 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { deleteIncome } from '@/app/(dashboard)/income/actions'
 import { toast } from 'sonner'
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table'
@@ -23,6 +23,8 @@ type IncomeRow = {
   source: string
 }
 
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
+
 type Props = {
   rows: IncomeRow[]
   filterPeriod: string // 'YYYY' (annual) or 'YYYY-MM'
@@ -32,6 +34,13 @@ type Props = {
 
 export default function IncomeTable({ rows, filterPeriod, closedMonths, onEdit }: Props) {
   const [isPending, startTransition] = useTransition()
+  const [page, setPage] = useState(0)
+  const [pageSize, setPageSize] = useState(10)
+  const [prevPeriod, setPrevPeriod] = useState(filterPeriod)
+  if (prevPeriod !== filterPeriod) {
+    setPrevPeriod(filterPeriod)
+    setPage(0)
+  }
 
   function handleDelete(id: string) {
     if (!confirm('למחוק הכנסה זו?')) return
@@ -133,7 +142,8 @@ export default function IncomeTable({ rows, filterPeriod, closedMonths, onEdit }
       columns={columns}
       data={filtered}
       rowKey={r => r.id}
-      emptyMessage="אין הכנסות לחודש זה"
+      pagination={{ page, pageSize, total: filtered.length, onPageChange: setPage, pageSizeOptions: PAGE_SIZE_OPTIONS, onPageSizeChange: n => { setPageSize(n); setPage(0) } }}
+      emptyMessage="אין הכנסות בתקופה זו"
     />
   )
 }

@@ -21,6 +21,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { cn } from '@/lib/utils'
 import { Button } from './button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select'
 
 export interface DataTableColumn<T> {
   key: string
@@ -40,6 +41,9 @@ export interface DataTablePagination {
   pageSize: number
   total: number
   onPageChange: (page: number) => void
+  /** When both are set, a rows-per-page selector is shown */
+  pageSizeOptions?: number[]
+  onPageSizeChange?: (size: number) => void
 }
 
 export interface DataTableProps<T> {
@@ -170,13 +174,32 @@ export function DataTable<T>({
     ? sorted.slice(pagination.page * pagination.pageSize, (pagination.page + 1) * pagination.pageSize)
     : sorted
 
-  const pagination$ = pagination && totalPages > 1 ? (
+  const showSizePicker = !!pagination?.pageSizeOptions && !!pagination.onPageSizeChange
+  const pagination$ = pagination && (totalPages > 1 || (showSizePicker && pagination.total > Math.min(...pagination.pageSizeOptions!))) ? (
     <div className="flex items-center justify-between m-1 pt-2 border-t border-border">
       <span className="text-xs text-muted-foreground tabular-nums">
         עמוד {pagination.page + 1} מתוך {totalPages}
         <span className="text-muted-foreground/60 mr-1">({pagination.total} שורות)</span>
       </span>
       <div className="flex items-center gap-1">
+        {showSizePicker && (
+          <label className="flex items-center gap-1.5 text-xs text-muted-foreground ml-2">
+            שורות בעמוד
+            <Select
+              value={String(pagination.pageSize)}
+              onValueChange={v => pagination.onPageSizeChange!(Number(v))}
+            >
+              <SelectTrigger className="h-7 w-20 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {pagination.pageSizeOptions!.map(n => (
+                  <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </label>
+        )}
         <Button
           variant="outline"
           size="sm"
