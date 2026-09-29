@@ -1,3 +1,14 @@
+## [2026-09-29] Income: pricing autocomplete
+- `IncomeModal` product name suggests saved `product_pricings` names (native datalist, free text still allowed); picking an exact match fills work hours from the pricing's `time_hours`. Price is never auto-filled
+- No schema change; income page now also loads `product_pricings (id, name, time_hours)`
+
+## [2026-09-29] Income: advance payment (מקדמה)
+- `income.advance_amount` (default 0) + `advance_date` (nullable) — migration `20260929000002_income_advance.sql`
+- `IncomeModal`: "שולמה מקדמה" checkbox → amount + date; breakdown shows advance and remaining balance; Zod requires the date when amount > 0 and amount ≤ final price
+- `IncomeTable`: new "מקדמה" column (amount + date)
+- Informational only: income is still counted in full on `income_date`; dashboard/cash-flow/VAT unchanged
+- NOT YET APPLIED to the DB — run the migration in the Supabase SQL Editor
+
 ## [2026-09-29] Pricing: VAT-inclusive price + folders
 - Pricing summary (wizard step 4 + detail modal) now shows VAT amount and "מחיר כולל מע״מ" on top of the ex-VAT suggested price (via `lib/vat.ts`, rate from settings); nothing stored
 - Optional `folder` text label on `product_pricings` (migration `20260929000001_pricing_folder.sql`); folder input with autocomplete of existing folders in the wizard, filter chips + folder column in `PricingHistoryPanel`

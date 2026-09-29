@@ -80,9 +80,19 @@ const incomeSchema = z.object({
   has_discount: z.boolean().default(false),
   discount_amount: z.coerce.number().nonnegative().default(0),
   delivery_amount: z.coerce.number().nonnegative().default(0),
+  advance_amount: z.coerce.number().nonnegative().default(0),
+  advance_date: z.string().optional(),
   work_hours: z.coerce.number().nonnegative().default(0),
   income_date: z.string().min(1, 'תאריך נדרש'),
   notes: z.string().optional(),
+}).superRefine((d, ctx) => {
+  if (d.advance_amount > 0 && !d.advance_date) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['advance_date'], message: 'תאריך מקדמה נדרש' })
+  }
+  const final = d.original_price - (d.has_discount ? d.discount_amount : 0)
+  if (d.advance_amount > final) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['advance_amount'], message: 'המקדמה גדולה מהמחיר הסופי' })
+  }
 })
 
 export async function createIncome(_prev: unknown, formData: FormData) {
@@ -99,6 +109,8 @@ export async function createIncome(_prev: unknown, formData: FormData) {
     has_discount: hasDiscount,
     discount_amount: hasDiscount ? formData.get('discount_amount') : 0,
     delivery_amount: formData.get('delivery_amount') || 0,
+    advance_amount: formData.get('advance_amount') || 0,
+    advance_date: formData.get('advance_date') || undefined,
     work_hours: formData.get('work_hours') || 0,
     income_date: formData.get('income_date'),
     notes: formData.get('notes') || undefined,
@@ -118,6 +130,8 @@ export async function createIncome(_prev: unknown, formData: FormData) {
     discount_amount: discountAmount,
     final_price: finalPrice,
     delivery_amount: parsed.data.delivery_amount,
+    advance_amount: parsed.data.advance_amount,
+    advance_date: parsed.data.advance_amount > 0 ? parsed.data.advance_date ?? null : null,
     work_hours: parsed.data.work_hours,
     income_date: parsed.data.income_date,
     notes: parsed.data.notes ?? null,
@@ -142,6 +156,8 @@ export async function updateIncome(_prev: unknown, formData: FormData) {
     has_discount: hasDiscount,
     discount_amount: hasDiscount ? formData.get('discount_amount') : 0,
     delivery_amount: formData.get('delivery_amount') || 0,
+    advance_amount: formData.get('advance_amount') || 0,
+    advance_date: formData.get('advance_date') || undefined,
     work_hours: formData.get('work_hours') || 0,
     income_date: formData.get('income_date'),
     notes: formData.get('notes') || undefined,
@@ -159,6 +175,8 @@ export async function updateIncome(_prev: unknown, formData: FormData) {
     discount_amount: discountAmount,
     final_price: finalPrice,
     delivery_amount: parsed.data.delivery_amount,
+    advance_amount: parsed.data.advance_amount,
+    advance_date: parsed.data.advance_amount > 0 ? parsed.data.advance_date ?? null : null,
     work_hours: parsed.data.work_hours,
     income_date: parsed.data.income_date,
     notes: parsed.data.notes ?? null,

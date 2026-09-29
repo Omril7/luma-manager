@@ -16,6 +16,8 @@ type IncomeRow = {
   discount_amount: number
   final_price: number
   delivery_amount: number
+  advance_amount: number
+  advance_date: string | null
   work_hours: number
   income_date: string
   notes: string | null
@@ -94,6 +96,19 @@ export default function IncomeTable({ rows, filterMonth, isMonthClosed, onEdit }
       sortValue: r => r.delivery_amount,
       cell: r => r.delivery_amount > 0
         ? <span className="text-blue-600 dark:text-blue-400">{formatILS(r.delivery_amount, 2)}</span>
+        : <span className="text-muted-foreground/50">—</span>,
+    },
+    {
+      key: 'advance_amount',
+      header: 'מקדמה',
+      sortValue: r => r.advance_amount,
+      cell: r => r.advance_amount > 0
+        ? (
+          <span className="tabular-nums">
+            {formatILS(r.advance_amount, 2)}
+            {r.advance_date && <span className="block text-xs text-muted-foreground">{new Date(r.advance_date).toLocaleDateString('he-IL')}</span>}
+          </span>
+        )
         : <span className="text-muted-foreground/50">—</span>,
     },
     {

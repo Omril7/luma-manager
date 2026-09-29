@@ -312,6 +312,8 @@ export type Database = {
           discount_amount: number
           final_price: number
           delivery_amount: number
+          advance_amount: number
+          advance_date: string | null
           work_hours: number
           income_date: string
           notes: string | null
@@ -328,6 +330,8 @@ export type Database = {
           discount_amount?: number
           final_price: number
           delivery_amount?: number
+          advance_amount?: number
+          advance_date?: string | null
           work_hours?: number
           income_date: string
           notes?: string | null
@@ -344,6 +348,8 @@ export type Database = {
           discount_amount?: number
           final_price?: number
           delivery_amount?: number
+          advance_amount?: number
+          advance_date?: string | null
           work_hours?: number
           income_date?: string
           notes?: string | null

@@ -27,21 +27,26 @@ type IncomeRow = {
   discount_amount: number
   final_price: number
   delivery_amount: number
+  advance_amount: number
+  advance_date: string | null
   work_hours: number
   income_date: string
   notes: string | null
   source: string
 }
 
+type Pricing = { id: string; name: string; time_hours: number }
+
 type Props = {
   products: Product[]
+  pricings: Pricing[]
   incomeRows: IncomeRow[]
   closedMonths: string[]
 }
 
 const MONTH_NAMES = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר']
 
-export default function IncomeClient({ products, incomeRows, closedMonths }: Props) {
+export default function IncomeClient({ products, pricings, incomeRows, closedMonths }: Props) {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -182,6 +187,7 @@ export default function IncomeClient({ products, incomeRows, closedMonths }: Pro
       {showIncomeModal && (
         <IncomeModal
           products={products}
+          pricings={pricings}
           income={editingIncome}
           closedMonths={closedMonths}
           onClose={() => setShowIncomeModal(false)}

@@ -15,21 +15,25 @@ type Product = { id: string; name: string; default_work_hours: number }
 type IncomeRow = {
   id: string; product_name: string; product_id: string | null; order_id: string | null
   original_price: number; discount_amount: number; final_price: number
-  delivery_amount: number; work_hours: number; income_date: string; notes: string | null
+  delivery_amount: number; advance_amount: number; advance_date: string | null; work_hours: number; income_date: string; notes: string | null
 }
-type Props = { products: Product[]; income?: IncomeRow; closedMonths: string[]; onClose: () => void }
+type Pricing = { id: string; name: string; time_hours: number }
+type Props = { products: Product[]; pricings: Pricing[]; income?: IncomeRow; closedMonths: string[]; onClose: () => void }
 
 function ils(n: number) {
   return n.toLocaleString('he-IL', { style: 'currency', currency: 'ILS', maximumFractionDigits: 2 })
 }
 
-export default function IncomeModal({ products, income, closedMonths, onClose }: Props) {
+export default function IncomeModal({ products, pricings, income, closedMonths, onClose }: Props) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState('')
   const [hasDiscount, setHasDiscount] = useState(income ? income.discount_amount > 0 : false)
   const [originalPrice, setOriginalPrice] = useState(income?.original_price ?? 0)
   const [discountAmount, setDiscountAmount] = useState(income?.discount_amount ?? 0)
   const [deliveryAmount, setDeliveryAmount] = useState(income?.delivery_amount ?? 0)
+  const [hasAdvance, setHasAdvance] = useState(income ? income.advance_amount > 0 : false)
+  const [advanceAmount, setAdvanceAmount] = useState(income?.advance_amount ?? 0)
+  const [advanceDate, setAdvanceDate] = useState(income?.advance_date ?? new Date().toISOString().slice(0, 10))
   const [workHours, setWorkHours] = useState(income?.work_hours ?? 0)
   const [useProduct, setUseProduct] = useState(!!income?.product_id)
   const [incomeDate, setIncomeDate] = useState(income?.income_date ?? new Date().toISOString().slice(0, 10))
@@ -37,6 +41,7 @@ export default function IncomeModal({ products, income, closedMonths, onClose }:
 
   const finalPrice = originalPrice - (hasDiscount ? discountAmount : 0)
   const productIncome = finalPrice - deliveryAmount
+  const remaining = finalPrice - (hasAdvance ? advanceAmount : 0)
 
   function handleProductChange(productId: string) {
     const product = products.find(p => p.id === productId)
@@ -44,6 +49,11 @@ export default function IncomeModal({ products, income, closedMonths, onClose }:
     const nameInput = formRef.current?.querySelector<HTMLInputElement>('[name="product_name"]')
     if (nameInput) nameInput.value = product.name
     if (product.default_work_hours > 0) setWorkHours(product.default_work_hours)
+  }
+
+  function handleNameChange(name: string) {
+    const pricing = pricings.find(p => p.name === name)
+    if (pricing && pricing.time_hours > 0) setWorkHours(pricing.time_hours)
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -57,6 +67,7 @@ export default function IncomeModal({ products, income, closedMonths, onClose }:
     const formData = new FormData(formRef.current!)
     formData.set('has_discount', hasDiscount ? 'true' : 'false')
     if (!hasDiscount) formData.set('discount_amount', '0')
+    if (!hasAdvance) formData.set('advance_amount', '0')
     startTransition(async () => {
       const action = income ? updateIncome : createIncome
       const result = await action(null, formData)
@@ -99,7 +110,19 @@ export default function IncomeModal({ products, income, closedMonths, onClose }:
             ) : (
               <input type="hidden" name="product_id" value="" />
             )}
-            <Input name="product_name" defaultValue={income?.product_name} required placeholder="שם מוצר" className={useProduct ? 'mt-2' : ''} />
+            <Input
+              name="product_name"
+              defaultValue={income?.product_name}
+              required
+              placeholder="שם מוצר"
+              list="pricing-names"
+              autoComplete="off"
+              onChange={e => handleNameChange(e.target.value)}
+              className={useProduct ? 'mt-2' : ''}
+            />
+            <datalist id="pricing-names">
+              {pricings.map(p => <option key={p.id} value={p.name} />)}
+            </datalist>
           </div>
 
           <div className="space-y-1.5">
@@ -176,12 +199,47 @@ export default function IncomeModal({ products, income, closedMonths, onClose }:
             <p className="text-xs text-muted-foreground">חלק מהמחיר שמיועד לדמי משלוח (0 אם אין משלוח)</p>
           </div>
 
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Checkbox id="has_advance" checked={hasAdvance} onCheckedChange={v => setHasAdvance(!!v)} />
+              <Label htmlFor="has_advance" className="font-normal cursor-pointer">שולמה מקדמה</Label>
+            </div>
+            {hasAdvance && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">סכום מקדמה</Label>
+                  <div className="relative">
+                    <Input name="advance_amount" type="number" step="0.01" min="0" max={finalPrice}
+                      value={advanceAmount} onChange={e => setAdvanceAmount(Number(e.target.value))} className="pl-8" />
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">₪</span>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">תאריך המקדמה</Label>
+                  <DatePicker name="advance_date" value={advanceDate} onChange={setAdvanceDate} />
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Price breakdown */}
           <div className="bg-green-500/10 border border-green-500/30 rounded-lg px-4 py-3 space-y-1.5">
             <div className="flex items-center justify-between">
               <p className="text-xs text-muted-foreground">סה&quot;כ שהתקבל</p>
               <p className="text-xl font-bold text-green-800 dark:text-green-300">{ils(finalPrice)}</p>
             </div>
+            {hasAdvance && advanceAmount > 0 && (
+              <>
+                <div className="flex items-center justify-between text-sm border-t border-green-500/20 pt-1.5">
+                  <span className="text-muted-foreground">מקדמה ({new Date(advanceDate).toLocaleDateString('he-IL')})</span>
+                  <span className="font-medium text-foreground">{ils(advanceAmount)}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">יתרה לתשלום</span>
+                  <span className="font-medium text-foreground">{ils(remaining)}</span>
+                </div>
+              </>
+            )}
             {deliveryAmount > 0 && (
               <>
                 <div className="flex items-center justify-between text-sm border-t border-green-500/20 pt-1.5">
